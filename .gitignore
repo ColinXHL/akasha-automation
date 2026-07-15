@@ -1,0 +1,19 @@
+[Bb]in/
+[Oo]bj/
+.vs/
+.idea/
+TestResults/
+artifacts/
+.artifacts/
+dist/
+*.user
+*.suo
+*.nupkg
+*.snupkg
+
+# Generated Worker payload copied into the plugin package by publish scripts.
+plugin/akasha-genshin-automation/worker/win-x64/*
+!plugin/akasha-genshin-automation/worker/win-x64/.gitkeep
+
+# Replay frames may contain local captures until they are reviewed for inclusion.
+testdata/frames/local/

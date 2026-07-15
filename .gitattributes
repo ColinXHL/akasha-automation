@@ -1,0 +1,8 @@
+* text=auto
+
+*.sln text eol=crlf
+*.csproj text eol=crlf
+*.ps1 text eol=crlf
+
+# BetterGI runtime assets are pinned byte-for-byte and must retain their upstream line endings.
+src/AkashaAutomation.BetterGiPort/Assets/Config/** binary

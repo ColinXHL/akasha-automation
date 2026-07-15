@@ -1,0 +1,60 @@
+{
+  "schemaVersion": 1,
+  "source": {
+    "repository": "https://github.com/babalae/better-genshin-impact.git",
+    "branch": "origin/main",
+    "commit": "0eb90304c4e4fa1f5cee2a4cbf68de6c8200ec94",
+    "version": "0.62.1-alpha.2",
+    "lastReviewedCommit": "0eb90304c4e4fa1f5cee2a4cbf68de6c8200ec94"
+  },
+  "runtimeArtifact": {
+    "version": "0.62.0",
+    "releaseCommit": "92b8beab53da3a1f86d625914c10d180fb05b0cd",
+    "status": "official-release-verified",
+    "downloadUrl": "https://github.com/babalae/better-genshin-impact/releases/download/0.62.0/BetterGI_v0.62.0.7z",
+    "archiveRoot": "BetterGI",
+    "size": 424052950,
+    "sha256": "11ccb62b7580dfdf15950300415cbde57181e5352dd817040bef2f9bc58bbb89",
+    "verifiedSample": "Installed BetterGI 0.62.0 distribution and official BetterGI_v0.62.0.7z",
+    "note": "The archive size and GitHub SHA-256 digest were verified, then all declared files were selectively extracted and matched the committed files byte-for-byte."
+  },
+  "assets": [
+    {
+      "id": "pick-default-blacklist",
+      "sourcePath": "Assets/Config/Pick/default_pick_black_lists.json",
+      "targetPath": "src/AkashaAutomation.BetterGiPort/Assets/Config/Pick/default_pick_black_lists.json",
+      "sha256": "1129650653eed1ec7e81676b3f616895feb9433ab616efc98ac360232c7e7ea9",
+      "kind": "json-string-list",
+      "count": 4914,
+      "uniqueCount": 4891
+    },
+    {
+      "id": "skip-default-pause-options",
+      "sourcePath": "Assets/Config/Skip/default_pause_options.json",
+      "targetPath": "src/AkashaAutomation.BetterGiPort/Assets/Config/Skip/default_pause_options.json",
+      "sha256": "212962f57e0bb0c04d9c3af062be53ddd929573f0399bc29b4476ec646f2ef65",
+      "kind": "json-string-list",
+      "count": 66,
+      "uniqueCount": 61
+    },
+    {
+      "id": "skip-pause-options",
+      "sourcePath": "Assets/Config/Skip/pause_options.json",
+      "targetPath": "src/AkashaAutomation.BetterGiPort/Assets/Config/Skip/pause_options.json",
+      "sha256": "fcc7d1e985862f0e3b0cc59cad7312642f7e96a318a73fc7646c093701a08b5b",
+      "kind": "json-string-list",
+      "count": 5,
+      "uniqueCount": 5
+    },
+    {
+      "id": "skip-select-options",
+      "sourcePath": "Assets/Config/Skip/select_options.json",
+      "targetPath": "src/AkashaAutomation.BetterGiPort/Assets/Config/Skip/select_options.json",
+      "sha256": "8585ca3368566a6efe15ef52a816494ac2469470d7ac3b806d3d329cb4b36e88",
+      "kind": "json-string-list",
+      "count": 1,
+      "uniqueCount": 1
+    }
+  ],
+  "localPatches": []
+}

@@ -1,0 +1,22 @@
+{
+  "schemaVersion": 1,
+  "algorithm": "SHA-256",
+  "assets": [
+    {
+      "path": "src/AkashaAutomation.BetterGiPort/Assets/Config/Pick/default_pick_black_lists.json",
+      "sha256": "1129650653eed1ec7e81676b3f616895feb9433ab616efc98ac360232c7e7ea9"
+    },
+    {
+      "path": "src/AkashaAutomation.BetterGiPort/Assets/Config/Skip/default_pause_options.json",
+      "sha256": "212962f57e0bb0c04d9c3af062be53ddd929573f0399bc29b4476ec646f2ef65"
+    },
+    {
+      "path": "src/AkashaAutomation.BetterGiPort/Assets/Config/Skip/pause_options.json",
+      "sha256": "fcc7d1e985862f0e3b0cc59cad7312642f7e96a318a73fc7646c093701a08b5b"
+    },
+    {
+      "path": "src/AkashaAutomation.BetterGiPort/Assets/Config/Skip/select_options.json",
+      "sha256": "8585ca3368566a6efe15ef52a816494ac2469470d7ac3b806d3d329cb4b36e88"
+    }
+  ]
+}

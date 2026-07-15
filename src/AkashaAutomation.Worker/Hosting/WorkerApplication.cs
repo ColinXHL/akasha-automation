@@ -5,6 +5,7 @@ using AkashaAutomation.Core.Abstractions;
 using AkashaAutomation.Worker.Bridge;
 using AkashaAutomation.Worker.Configuration;
 using AkashaAutomation.Features.AutoPick;
+using AkashaAutomation.Features.AutoDialogue;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 
@@ -26,6 +27,7 @@ public sealed class WorkerApplication
     private readonly DateTimeOffset _startedAtUtc;
     private readonly IInputArbiter? _inputArbiter;
     private readonly IAutoPickController? _autoPickController;
+    private readonly IAutoDialogueController? _autoDialogueController;
 
     public WorkerApplication(
         IParentProcessLifetime parentProcess,
@@ -40,7 +42,8 @@ public sealed class WorkerApplication
             connectionTimeout,
             handshakeTimeout,
             inputArbiter: null,
-            autoPickController: null)
+            autoPickController: null,
+            autoDialogueController: null)
     {
     }
 
@@ -52,7 +55,8 @@ public sealed class WorkerApplication
         TimeSpan? connectionTimeout = null,
         TimeSpan? handshakeTimeout = null,
         IInputArbiter? inputArbiter = null,
-        IAutoPickController? autoPickController = null)
+        IAutoPickController? autoPickController = null,
+        IAutoDialogueController? autoDialogueController = null)
     {
         _parentProcess = parentProcess ?? throw new ArgumentNullException(nameof(parentProcess));
         _runtime = runtime ?? throw new ArgumentNullException(nameof(runtime));
@@ -63,6 +67,7 @@ public sealed class WorkerApplication
         _startedAtUtc = DateTimeOffset.UtcNow;
         _inputArbiter = inputArbiter;
         _autoPickController = autoPickController;
+        _autoDialogueController = autoDialogueController;
     }
 
     public async Task<int> RunAsync(
@@ -291,6 +296,7 @@ public sealed class WorkerApplication
                 {
                     _runtime.EmergencyStop.Trigger(WorkerStopReason.CompanionEmergencyStop);
                     _autoPickController?.SetEnabled(false);
+                    _autoDialogueController?.SetEnabled(false);
                     if (_inputArbiter is not null)
                     {
                         await _inputArbiter.EmergencyStopAsync(cancellationToken).ConfigureAwait(false);

@@ -1,10 +1,10 @@
-# AutoPick DevHost 实机测试
+# DevHost 实机测试
 
-`AkashaAutomation.DevHost` 是开发专用的独立控制台程序。它不连接 AkashaNavigator、不使用 companion 管道，直接运行真实窗口发现、Windows Graphics Capture、模板匹配、PaddleOCR、AutoPick 规则和 Input Arbiter。
+`AkashaAutomation.DevHost` 是开发专用的独立控制台程序。它不连接 AkashaNavigator、不使用 companion 管道，直接运行真实窗口发现、Windows Graphics Capture、模板匹配、PaddleOCR、AutoPick/AutoDialogue 规则和 Input Arbiter。
 
 DevHost 永久为 observe-only：项目中只注册 `ObserveOnlyInputService`，不会发送键盘或鼠标输入，也没有启用真实输入的参数。
 
-## 启动
+## AutoPick 启动
 
 1. 启动原神，推荐使用窗口化或无边框窗口模式。
 2. 如果原神以管理员身份运行，也用管理员 PowerShell 启动 DevHost。
@@ -24,6 +24,49 @@ dotnet run `
 ```
 
 按 `Ctrl+C` 会先触发 Input Arbiter 急停，再释放截图和 OCR 资源。
+
+## AutoDialogue 启动
+
+```powershell
+dotnet run `
+  --project .\src\AkashaAutomation.DevHost\AkashaAutomation.DevHost.csproj `
+  --configuration Release `
+  -- --feature auto-dialogue --option-strategy first
+```
+
+常用变体：
+
+```powershell
+# 不自动选择普通选项，只观察暂停/识别结果
+--feature auto-dialogue --option-strategy none
+
+# 自定义优先选项
+--feature auto-dialogue --custom-option "我准备好了"
+
+# 启用游戏进程 loopback + Silero VAD；不可用时自动回退固定延迟
+--feature auto-dialogue --voice-wait
+```
+
+AutoDialogue 日志字段：
+
+```text
+ui=Talk options="选项一 | 选项二" reason=fallback_first wouldAct=true voiceWait=false fallback=false arbiter=executed
+```
+
+建议依次验证：
+
+| 场景 | 预期结果 |
+|---|---|
+| 普通剧情对白 | `ui=Talk`，`reason=advance_dialogue` |
+| 两个普通选项 | `options` 列出文字，按策略得到 `fallback_first/last/random` |
+| 内置暂停关键词 | `pause_priority` 或 `default_pause_priority`，`wouldAct=false` |
+| 橙色选项 | `orange_option`；每日/派遣分别显示专用 reason |
+| 黑屏剧情 | `black_screen` |
+| 页面、道具或角色介绍弹窗 | `popup_page_close`、`item_popup_triangle` 或 `character_popup` |
+| 提交物品 | `submit_select_goods → submit_put_in → submit_delivery` |
+| 邀约 | `hangout_option` 或 `hangout_skip` |
+
+这些 `wouldAct=true` 仍只代表“正式输入模式下会提交意图”；DevHost 实际发送始终为 0。
 
 ## 观察输出
 
@@ -58,6 +101,12 @@ dotnet run `
 --fuzzy-blacklist TEXT
 --whitelist TEXT
 --show-all
+--feature auto-pick|auto-dialogue
+--option-strategy first|last|random|none
+--custom-option TEXT
+--advance-key space|interaction
+--voice-wait
+--hangout-ending TEXT
 --help
 ```
 

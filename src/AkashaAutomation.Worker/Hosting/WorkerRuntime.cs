@@ -1,5 +1,6 @@
 using Microsoft.Extensions.Logging;
 using AkashaAutomation.Features.AutoPick;
+using AkashaAutomation.Features.AutoDialogue;
 
 namespace AkashaAutomation.Worker.Hosting;
 
@@ -10,13 +11,14 @@ public sealed class WorkerRuntime
         ILoggerFactory? loggerFactory = null,
         int commandQueueCapacity = WorkerCommandQueue.DefaultCapacity,
         Func<WorkerStatusProvider, EmergencyStopController, IWorkerCommandHandler>? commandHandlerFactory = null,
-        IAutoPickController? autoPickController = null)
+        IAutoPickController? autoPickController = null,
+        IAutoDialogueController? autoDialogueController = null)
     {
         StateMachine = new WorkerStateMachine();
         EmergencyStop = new EmergencyStopController();
-        StatusProvider = new WorkerStatusProvider(StateMachine, EmergencyStop, autoPickController);
+        StatusProvider = new WorkerStatusProvider(StateMachine, EmergencyStop, autoPickController, autoDialogueController);
         CommandHandler = commandHandlerFactory?.Invoke(StatusProvider, EmergencyStop)
-                         ?? new WorkerCommandHandler(StatusProvider, EmergencyStop, autoPickController);
+                         ?? new WorkerCommandHandler(StatusProvider, EmergencyStop, autoPickController, autoDialogueController);
         CommandQueue = new WorkerCommandQueue(
             CommandHandler,
             commandQueueCapacity,

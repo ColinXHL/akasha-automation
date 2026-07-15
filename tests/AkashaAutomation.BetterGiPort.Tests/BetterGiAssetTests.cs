@@ -2,6 +2,7 @@ using System.Text.Json;
 using System.Diagnostics;
 using AkashaAutomation.BetterGiPort.Assets;
 using AkashaAutomation.BetterGiPort.Compatibility.Ocr;
+using AkashaAutomation.BetterGiPort.Compatibility.Audio;
 using AkashaAutomation.Core.Capture;
 using AkashaAutomation.Core.Ocr;
 using AkashaAutomation.Core.Recognition;
@@ -29,6 +30,30 @@ public class BetterGiAssetTests
         new(BetterGiAssetPaths.PaddleOcrV4DetectionModel, "c0f2e256776e81d9e38f49e7cc2a37864a326ee8097e84adf30a8e0ebcc0b24b"),
         new(BetterGiAssetPaths.PaddleOcrV4RecognitionConfig, "018c94645678dc492754754291705c4999f35c6e5be854a42b4f918fefd06ab4"),
         new(BetterGiAssetPaths.PaddleOcrV4RecognitionModel, "df79157f86aa181ee0daa43364203cfc892f98e2a1b425614a1c98e0b96d7393"),
+        new(BetterGiAssetPaths.AutoSkipChatReview, "01329715d8e393e05edeaa8201091f9477867c2ab354d634d3a1a6924ee6fa48"),
+        new(BetterGiAssetPaths.AutoSkipCollect, "ab53c472b7a857ea082b9db2e92d360bc9dda005f361781b0fc6ea3eb8663739"),
+        new(BetterGiAssetPaths.AutoSkipConfirm1, "9483c91e6c54eb436023961c7f07cb332f2b86bb0c9568d8ff009f0102b38340"),
+        new(BetterGiAssetPaths.AutoSkipConfirm2, "7d41269bb6d206e36c31a770df862c736efdbd36426207ccdeb7c2c446e5e21c"),
+        new(BetterGiAssetPaths.AutoSkipCook, "8d1034166db5737eea45336935db9157e1442213f8c47eb0c6fcebab33ac58d2"),
+        new(BetterGiAssetPaths.AutoSkipDisabledUi, "96759fb9b99f85d274c888718ff102ef47f31bd17cf939ba813ffda556f0dd5f"),
+        new(BetterGiAssetPaths.AutoSkipHangoutSelected, "45f3c6957edf48b258a2ea14c40669058594cf61e5c2ba9245157099b3336889"),
+        new(BetterGiAssetPaths.AutoSkipHangoutSkip, "e608903df8c05595353ebc6c032525350e04d15bde4ea098c2cd31a844383829"),
+        new(BetterGiAssetPaths.AutoSkipHangoutUnselected, "a6654128e1167b3ebd7ba638eee633359f1cbc2f65de22973b3f285f13d04daf"),
+        new(BetterGiAssetPaths.AutoSkipDailyRewardIcon, "42d123059d001a72949f74394eb2d6a9f1da30b2ab79fd801fcc2dc99c187860"),
+        new(BetterGiAssetPaths.AutoSkipExclamationIcon, "b0bdebda7e020e1150a6e3ae870b320c30b948f7cc6cb39b155bb8237994d6be"),
+        new(BetterGiAssetPaths.AutoSkipExploreIcon, "e79a28f80d0cd1b5da55c0ad36c2bcb59036dedafa474a42800a5c2453cd585d"),
+        new(BetterGiAssetPaths.AutoSkipOptionIcon, "b4f03c5641447fc30f2a3a92ab189e0fbc55444985c9baeedd68d3d506e68505"),
+        new(BetterGiAssetPaths.AutoSkipPageCloseMain, "4ca6151c1df55396261b52a6037978240c45c54196ba2d8a5ca0674a60d05e48"),
+        new(BetterGiAssetPaths.AutoSkipPageClose, "78c68dd0bd17a43c6e1dab48d6c1ebbf4957c8c64bdcb9682cfb6f3e50e5fec8"),
+        new(BetterGiAssetPaths.AutoSkipPrimogem, "85b3221a4a35365b018659ddee39ae44e22f8b4a2e49a8ab22c5f5b844b7d8ac"),
+        new(BetterGiAssetPaths.AutoSkipReExplore, "1a8870b5cb6b210cb3e9ae80bf79dee73a1d5febfadb2b9bafeb7a588b8f7c0e"),
+        new(BetterGiAssetPaths.AutoSkipStopAuto, "b254dba8a2fa29b910976a2cab030cc78cbfea797647bea949baae0a70ebcc33"),
+        new(BetterGiAssetPaths.AutoSkipSubmitGoods, "ad293722323dfd6df48c1cf3c459dcfe9d1d3ef90698ea2e3f2d464cfac48494"),
+        new(BetterGiAssetPaths.AutoSkipSubmitExclamation, "8438251319f492ea663b88241485f1ce4cb1a0ed4017781c4d919b0248ba546b"),
+        new(BetterGiAssetPaths.SileroVadLicense, "840a2b8a9e6091a4edc7531318b9392b1d57dd9a587c83ca3f022731c0b0e858"),
+        new(BetterGiAssetPaths.SileroVadReadme, "3792d8803e6c91760dbb05bbe7d281175d7eb2b4c8c77c7866d00251ae7bf249"),
+        new(BetterGiAssetPaths.SileroVadModel, "1a153a22f4509e292a94e67d6f9b85e8deb25b4988682b7e174c65279d8788e3"),
+        new(BetterGiAssetPaths.HangoutOptions, "316598f1b51cd63e8add1cebce5bb2f7580b585839ef8a6e8608b39c6b3e40f3"),
     ];
 
     [Fact]
@@ -157,6 +182,18 @@ public class BetterGiAssetTests
 
         await engine.DisposeAsync();
         Assert.Equal(baseline, PaddleOcrEngine.ActiveSessions);
+    }
+
+    [Fact]
+    public void SileroVad_ShouldLoadPinnedModelAndAcceptOneFrame()
+    {
+        var resolver = new RootedAssetPathResolver(AppContext.BaseDirectory);
+        using var detector = new BetterGiSileroVadDetector(resolver.Resolve(BetterGiAssetPaths.SileroVadModel));
+
+        detector.Reset();
+        var probability = detector.Predict(new float[BetterGiSileroVadDetector.FrameSampleCount]);
+
+        Assert.InRange(probability, 0f, 1f);
     }
 
     [Fact]

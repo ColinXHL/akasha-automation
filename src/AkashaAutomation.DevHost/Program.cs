@@ -36,7 +36,14 @@ internal static class Program
         Console.CancelKeyPress += cancelHandler;
         try
         {
-            await new AutoPickDevHost(options).RunAsync(cancellation.Token).ConfigureAwait(false);
+            if (options.Feature == "auto-dialogue")
+            {
+                await new AutoDialogueDevHost(options).RunAsync(cancellation.Token).ConfigureAwait(false);
+            }
+            else
+            {
+                await new AutoPickDevHost(options).RunAsync(cancellation.Token).ConfigureAwait(false);
+            }
             return 0;
         }
         catch (OperationCanceledException) when (cancellation.IsCancellationRequested)

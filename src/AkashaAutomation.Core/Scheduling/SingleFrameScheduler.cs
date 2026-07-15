@@ -12,6 +12,7 @@ public sealed class SingleFrameScheduler
     private readonly IInputArbiter _inputArbiter;
     private readonly IDiagnosticsSink _diagnostics;
     private readonly IClock _clock;
+    private readonly IGameUiContextClassifier _contextClassifier;
 
     public SingleFrameScheduler(
         ICaptureSource captureSource,
@@ -19,7 +20,8 @@ public sealed class SingleFrameScheduler
         IEnumerable<IAutomationFeature> features,
         IInputArbiter inputArbiter,
         IDiagnosticsSink diagnostics,
-        IClock clock)
+        IClock clock,
+        IGameUiContextClassifier? contextClassifier = null)
     {
         _captureSource = captureSource;
         _gameContextProvider = gameContextProvider;
@@ -27,6 +29,7 @@ public sealed class SingleFrameScheduler
         _inputArbiter = inputArbiter;
         _diagnostics = diagnostics;
         _clock = clock;
+        _contextClassifier = contextClassifier ?? new NullGameUiContextClassifier();
     }
 
     public async ValueTask<SingleFrameScheduleResult> RunOnceAsync(CancellationToken cancellationToken = default)
@@ -41,6 +44,33 @@ public sealed class SingleFrameScheduler
         if (frame is null)
         {
             return new SingleFrameScheduleResult(false, null, [], new(false, "capture_unavailable"));
+        }
+
+        try
+        {
+            context = context with
+            {
+                UiCategory = await _contextClassifier
+                    .ClassifyAsync(frame, context, cancellationToken)
+                    .ConfigureAwait(false),
+            };
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            throw;
+        }
+        catch (Exception exception)
+        {
+            _diagnostics.Write(
+                new DiagnosticEvent(
+                    _clock.UtcNow,
+                    "scheduler",
+                    "context_classification_failed",
+                    new Dictionary<string, object?>
+                    {
+                        ["exceptionType"] = exception.GetType().FullName,
+                        ["message"] = exception.Message,
+                    }));
         }
 
         var decisions = new List<FeatureDecision>(_features.Count);

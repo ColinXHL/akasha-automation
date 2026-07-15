@@ -12,7 +12,15 @@
       "BetterGenshinImpact/GameTask/AutoPick/TextRectExtractor.cs",
       "BetterGenshinImpact/GameTask/AutoPick/Assets/AutoPickAssets.cs",
       "BetterGenshinImpact/GameTask/AutoPick/Assets/Recognition.json",
-      "BetterGenshinImpact/GameTask/AutoSkip/Assets/Recognition.json"
+      "BetterGenshinImpact/GameTask/AutoSkip/AutoSkipConfig.cs",
+      "BetterGenshinImpact/GameTask/AutoSkip/AutoSkipTrigger.cs",
+      "BetterGenshinImpact/GameTask/AutoSkip/Assets/Recognition.json",
+      "BetterGenshinImpact/GameTask/AutoSkip/Assets/HangoutConfig.cs",
+      "BetterGenshinImpact/GameTask/AutoSkip/Assets/hangout.json",
+      "BetterGenshinImpact/GameTask/AutoSkip/Audio/SileroVadDetector.cs",
+      "BetterGenshinImpact/GameTask/AutoSkip/Audio/ProcessLoopbackAudioCapture.cs",
+      "BetterGenshinImpact/GameTask/AutoSkip/Audio/DialogueOptionVoiceDetector.cs",
+      "BetterGenshinImpact/GameTask/AutoSkip/Audio/DialogueOptionAudioWaiter.cs"
     ]
   },
   "runtimeArtifact": {
@@ -158,6 +166,198 @@
       "sha256": "df79157f86aa181ee0daa43364203cfc892f98e2a1b425614a1c98e0b96d7393",
       "kind": "onnx",
       "size": 10826716
+    },
+    {
+      "id": "autoskip-chat-review",
+      "sourcePath": "GameTask/AutoSkip/Assets/1920x1080/chat_review.png",
+      "targetPath": "src/AkashaAutomation.BetterGiPort/Assets/Recognition/AutoSkip/1920x1080/chat_review.png",
+      "sha256": "01329715d8e393e05edeaa8201091f9477867c2ab354d634d3a1a6924ee6fa48",
+      "kind": "png",
+      "size": 491
+    },
+    {
+      "id": "autoskip-collect",
+      "sourcePath": "GameTask/AutoSkip/Assets/1920x1080/collect.png",
+      "targetPath": "src/AkashaAutomation.BetterGiPort/Assets/Recognition/AutoSkip/1920x1080/collect.png",
+      "sha256": "ab53c472b7a857ea082b9db2e92d360bc9dda005f361781b0fc6ea3eb8663739",
+      "kind": "png",
+      "size": 1706
+    },
+    {
+      "id": "autoskip-confirm-1",
+      "sourcePath": "GameTask/AutoSkip/Assets/1920x1080/comfirm_btn1.png",
+      "targetPath": "src/AkashaAutomation.BetterGiPort/Assets/Recognition/AutoSkip/1920x1080/comfirm_btn1.png",
+      "sha256": "9483c91e6c54eb436023961c7f07cb332f2b86bb0c9568d8ff009f0102b38340",
+      "kind": "png",
+      "size": 1766
+    },
+    {
+      "id": "autoskip-confirm-2",
+      "sourcePath": "GameTask/AutoSkip/Assets/1920x1080/comfirm_btn2.png",
+      "targetPath": "src/AkashaAutomation.BetterGiPort/Assets/Recognition/AutoSkip/1920x1080/comfirm_btn2.png",
+      "sha256": "7d41269bb6d206e36c31a770df862c736efdbd36426207ccdeb7c2c446e5e21c",
+      "kind": "png",
+      "size": 1612
+    },
+    {
+      "id": "autoskip-cook",
+      "sourcePath": "GameTask/AutoSkip/Assets/1920x1080/cook.png",
+      "targetPath": "src/AkashaAutomation.BetterGiPort/Assets/Recognition/AutoSkip/1920x1080/cook.png",
+      "sha256": "8d1034166db5737eea45336935db9157e1442213f8c47eb0c6fcebab33ac58d2",
+      "kind": "png",
+      "size": 6149
+    },
+    {
+      "id": "autoskip-disabled-ui",
+      "sourcePath": "GameTask/AutoSkip/Assets/1920x1080/disabled_ui.png",
+      "targetPath": "src/AkashaAutomation.BetterGiPort/Assets/Recognition/AutoSkip/1920x1080/disabled_ui.png",
+      "sha256": "96759fb9b99f85d274c888718ff102ef47f31bd17cf939ba813ffda556f0dd5f",
+      "kind": "png",
+      "size": 1201
+    },
+    {
+      "id": "autoskip-hangout-selected",
+      "sourcePath": "GameTask/AutoSkip/Assets/1920x1080/hangout_selected.png",
+      "targetPath": "src/AkashaAutomation.BetterGiPort/Assets/Recognition/AutoSkip/1920x1080/hangout_selected.png",
+      "sha256": "45f3c6957edf48b258a2ea14c40669058594cf61e5c2ba9245157099b3336889",
+      "kind": "png",
+      "size": 2795
+    },
+    {
+      "id": "autoskip-hangout-skip",
+      "sourcePath": "GameTask/AutoSkip/Assets/1920x1080/hangout_skip.png",
+      "targetPath": "src/AkashaAutomation.BetterGiPort/Assets/Recognition/AutoSkip/1920x1080/hangout_skip.png",
+      "sha256": "e608903df8c05595353ebc6c032525350e04d15bde4ea098c2cd31a844383829",
+      "kind": "png",
+      "size": 631
+    },
+    {
+      "id": "autoskip-hangout-unselected",
+      "sourcePath": "GameTask/AutoSkip/Assets/1920x1080/hangout_unselected.png",
+      "targetPath": "src/AkashaAutomation.BetterGiPort/Assets/Recognition/AutoSkip/1920x1080/hangout_unselected.png",
+      "sha256": "a6654128e1167b3ebd7ba638eee633359f1cbc2f65de22973b3f285f13d04daf",
+      "kind": "png",
+      "size": 2862
+    },
+    {
+      "id": "autoskip-daily-reward-icon",
+      "sourcePath": "GameTask/AutoSkip/Assets/1920x1080/icon_daily_reward.png",
+      "targetPath": "src/AkashaAutomation.BetterGiPort/Assets/Recognition/AutoSkip/1920x1080/icon_daily_reward.png",
+      "sha256": "42d123059d001a72949f74394eb2d6a9f1da30b2ab79fd801fcc2dc99c187860",
+      "kind": "png",
+      "size": 3357
+    },
+    {
+      "id": "autoskip-exclamation-icon",
+      "sourcePath": "GameTask/AutoSkip/Assets/1920x1080/icon_exclamation.png",
+      "targetPath": "src/AkashaAutomation.BetterGiPort/Assets/Recognition/AutoSkip/1920x1080/icon_exclamation.png",
+      "sha256": "b0bdebda7e020e1150a6e3ae870b320c30b948f7cc6cb39b155bb8237994d6be",
+      "kind": "png",
+      "size": 1221
+    },
+    {
+      "id": "autoskip-explore-icon",
+      "sourcePath": "GameTask/AutoSkip/Assets/1920x1080/icon_explore.png",
+      "targetPath": "src/AkashaAutomation.BetterGiPort/Assets/Recognition/AutoSkip/1920x1080/icon_explore.png",
+      "sha256": "e79a28f80d0cd1b5da55c0ad36c2bcb59036dedafa474a42800a5c2453cd585d",
+      "kind": "png",
+      "size": 1790
+    },
+    {
+      "id": "autoskip-option-icon",
+      "sourcePath": "GameTask/AutoSkip/Assets/1920x1080/icon_option.png",
+      "targetPath": "src/AkashaAutomation.BetterGiPort/Assets/Recognition/AutoSkip/1920x1080/icon_option.png",
+      "sha256": "b4f03c5641447fc30f2a3a92ab189e0fbc55444985c9baeedd68d3d506e68505",
+      "kind": "png",
+      "size": 480
+    },
+    {
+      "id": "autoskip-page-close-main",
+      "sourcePath": "GameTask/AutoSkip/Assets/1920x1080/page_close_main.png",
+      "targetPath": "src/AkashaAutomation.BetterGiPort/Assets/Recognition/AutoSkip/1920x1080/page_close_main.png",
+      "sha256": "4ca6151c1df55396261b52a6037978240c45c54196ba2d8a5ca0674a60d05e48",
+      "kind": "png",
+      "size": 1633
+    },
+    {
+      "id": "autoskip-page-close",
+      "sourcePath": "GameTask/AutoSkip/Assets/1920x1080/page_close.png",
+      "targetPath": "src/AkashaAutomation.BetterGiPort/Assets/Recognition/AutoSkip/1920x1080/page_close.png",
+      "sha256": "78c68dd0bd17a43c6e1dab48d6c1ebbf4957c8c64bdcb9682cfb6f3e50e5fec8",
+      "kind": "png",
+      "size": 2150
+    },
+    {
+      "id": "autoskip-primogem",
+      "sourcePath": "GameTask/AutoSkip/Assets/1920x1080/primogem.png",
+      "targetPath": "src/AkashaAutomation.BetterGiPort/Assets/Recognition/AutoSkip/1920x1080/primogem.png",
+      "sha256": "85b3221a4a35365b018659ddee39ae44e22f8b4a2e49a8ab22c5f5b844b7d8ac",
+      "kind": "png",
+      "size": 15382
+    },
+    {
+      "id": "autoskip-reexplore",
+      "sourcePath": "GameTask/AutoSkip/Assets/1920x1080/re.png",
+      "targetPath": "src/AkashaAutomation.BetterGiPort/Assets/Recognition/AutoSkip/1920x1080/re.png",
+      "sha256": "1a8870b5cb6b210cb3e9ae80bf79dee73a1d5febfadb2b9bafeb7a588b8f7c0e",
+      "kind": "png",
+      "size": 1811
+    },
+    {
+      "id": "autoskip-stop-auto",
+      "sourcePath": "GameTask/AutoSkip/Assets/1920x1080/stop_auto.png",
+      "targetPath": "src/AkashaAutomation.BetterGiPort/Assets/Recognition/AutoSkip/1920x1080/stop_auto.png",
+      "sha256": "b254dba8a2fa29b910976a2cab030cc78cbfea797647bea949baae0a70ebcc33",
+      "kind": "png",
+      "size": 319
+    },
+    {
+      "id": "autoskip-submit-goods",
+      "sourcePath": "GameTask/AutoSkip/Assets/1920x1080/submit_goods.png",
+      "targetPath": "src/AkashaAutomation.BetterGiPort/Assets/Recognition/AutoSkip/1920x1080/submit_goods.png",
+      "sha256": "ad293722323dfd6df48c1cf3c459dcfe9d1d3ef90698ea2e3f2d464cfac48494",
+      "kind": "png",
+      "size": 482
+    },
+    {
+      "id": "autoskip-submit-exclamation",
+      "sourcePath": "GameTask/AutoSkip/Assets/1920x1080/submit_icon_exclamation.png",
+      "targetPath": "src/AkashaAutomation.BetterGiPort/Assets/Recognition/AutoSkip/1920x1080/submit_icon_exclamation.png",
+      "sha256": "8438251319f492ea663b88241485f1ce4cb1a0ed4017781c4d919b0248ba546b",
+      "kind": "png",
+      "size": 1015
+    },
+    {
+      "id": "silero-vad-license",
+      "sourcePath": "Assets/Model/Vad/LICENSE",
+      "targetPath": "src/AkashaAutomation.BetterGiPort/Assets/Model/Vad/LICENSE",
+      "sha256": "840a2b8a9e6091a4edc7531318b9392b1d57dd9a587c83ca3f022731c0b0e858",
+      "kind": "text",
+      "size": 1097
+    },
+    {
+      "id": "silero-vad-readme",
+      "sourcePath": "Assets/Model/Vad/README.md",
+      "targetPath": "src/AkashaAutomation.BetterGiPort/Assets/Model/Vad/README.md",
+      "sha256": "3792d8803e6c91760dbb05bbe7d281175d7eb2b4c8c77c7866d00251ae7bf249",
+      "kind": "text",
+      "size": 227
+    },
+    {
+      "id": "silero-vad-model",
+      "sourcePath": "Assets/Model/Vad/silero_vad.onnx",
+      "targetPath": "src/AkashaAutomation.BetterGiPort/Assets/Model/Vad/silero_vad.onnx",
+      "sha256": "1a153a22f4509e292a94e67d6f9b85e8deb25b4988682b7e174c65279d8788e3",
+      "kind": "onnx",
+      "size": 2327524
+    },
+    {
+      "id": "autoskip-hangout-config",
+      "sourcePath": "GameTask/AutoSkip/Assets/hangout.json",
+      "targetPath": "src/AkashaAutomation.BetterGiPort/Assets/Config/Skip/hangout.json",
+      "sha256": "316598f1b51cd63e8add1cebce5bb2f7580b585839ef8a6e8608b39c6b3e40f3",
+      "kind": "json",
+      "size": 14790
     }
   ],
   "localPatches": [
@@ -165,6 +365,11 @@
       "scope": "AutoPick",
       "decision": "translate",
       "description": "Preserve BetterGI rule order, OCR cleanup, hard-coded exclusions, 1080p ROI constants and E/F/G templates while translating direct input into one Akasha AutomationIntent per frame. UI, static TaskContext, scrolling and direct SendInput calls are intentionally excluded."
+    },
+    {
+      "scope": "AutoSkip",
+      "decision": "translate",
+      "description": "Preserve BetterGI dialogue option priority, 1080p template and color thresholds, special-scene recognition and Silero VAD timing while translating direct clicks and sleeps into scheduler-driven AutomationIntent state machines. BetterGI UI, global TaskContext and process lifetime dependencies are excluded."
     }
   ]
 }

@@ -4,14 +4,14 @@
 
 ## 1. 当前状态与实施起点
 
-当前仓库已完成 Phase 0、Phase 1 Companion Echo 纵向切片、Phase 2 Worker Host、Phase 3 识别/回放基础设施与 Phase 4 AutoPick 纵向切片：
+当前仓库已完成 Phase 0、Phase 1 Companion Echo 纵向切片、Phase 2 Worker Host、Phase 3 识别/回放基础设施、Phase 4 AutoPick 与 Phase 5 AutoDialogue 纵向切片：
 
 - `AkashaAutomation.Core` 已具备截图帧所有权、回放、坐标换算、模板匹配、OCR、窗口上下文、输入与单帧调度契约和实现。
-- `AkashaAutomation.Features` 已具备 AutoPick 配置控制、识别/OCR/规则链、动作意图、诊断状态和调度宿主；AutoDialogue 尚未迁移。
-- `AkashaAutomation.DevHost` 提供不依赖 AkashaNavigator 的 AutoPick 真实游戏 observe-only 测试入口，强制使用无输入观察服务。
+- `AkashaAutomation.Features` 已具备 AutoPick 与 AutoDialogue 配置控制、识别/OCR/规则链、动作意图、虚拟时间等待、诊断状态和调度宿主。
+- `AkashaAutomation.DevHost` 提供不依赖 AkashaNavigator 的 AutoPick/AutoDialogue 真实游戏 observe-only 测试入口，强制使用无输入观察服务。
 - `AkashaAutomation.Worker` 已安全注册 Phase 3 Core 服务；真实 `SendInput` 实现不在 Host 注册，急停在回复前同步锁死 Core Input Arbiter。
 - 插件清单和 Echo 入口脚本已实现，设置面板尚未实现。
-- AutoPick 具备测试运行时生成的确定性 1080p/1440p 回放基线；真实游戏录制帧、发行脚本和同步脚本尚未实现。
+- AutoPick 与 AutoDialogue 具备测试运行时生成的确定性 1080p/1440p 回放基线；真实游戏录制帧、发行脚本和同步脚本尚未实现。
 - AkashaNavigator 已实现 companion manifest、权限确认、进程管理和受限 JS API。
 
 截至 2026-07-14，Phase 0 首批成果已经落地：
@@ -47,6 +47,8 @@ Akasha 插件
 Phase 3 已通过回放、真实 PaddleOCR 预热图和 Worker 安全注册测试。Phase 4 在接入首条业务链路时仍默认只记录动作意图；人工验收前禁止注册真实键鼠输入。
 
 2026-07-15 已完成 Phase 4：Worker 可通过协议启停和更新 AutoPick 配置，启用后由托管调度循环按单帧链路执行；识别结果进入 BetterGI 兼容规则层，再产生至多一个拾取意图并交由 Input Arbiter。默认 `DisabledInputService` 保持不变，急停会同步禁用 AutoPick 并锁死 Arbiter。
+
+同日完成 Phase 5：调度器在 Feature 前识别 `Talk` 上下文，AutoDialogue 以高于 AutoPick 的优先级处理对话推进和选项，AutoPick 在对话帧无条件抑制。用户自定义、内置选择、高优先级暂停、橙色、默认暂停及首项/末项/随机项顺序按固定 BetterGI 源码基线迁移；黑屏、页面/道具/角色弹窗、提交物品、每日奖励/重新派遣和邀约均为独立处理器。Silero VAD 模型、许可证和进程 loopback 实现来自固定发行/源码基线；模型、音频捕获或推理不可用时使用 `IClock` 固定延迟回退。Worker 和 DevHost 仍只注册禁用/观察输入服务。
 
 ## 2. 已确定的实现决策
 
@@ -98,7 +100,7 @@ version: 0.62.1-alpha.2
 1. 可重复下载的 BetterGI Release 或 alpha 构件 URL。
 2. 完整构件 SHA-256。
 3. 从构件选择性解压上述文件后，逐文件哈希与本机取样一致，或记录差异原因。
-4. PP-OCRv4 模型的来源、路径和哈希已完成；Yap 和 Silero VAD 仍须在对应阶段补齐来源、许可证、路径和哈希。
+4. PP-OCRv4 与 Silero VAD 模型的来源、许可证、路径和哈希已完成；Yap 若在未来功能中启用仍须单独补齐。
 
 源码 commit 与运行资源使用两个独立 pin。选择源码提交时必须检查它是否新增、删除或改变运行资源要求；不默认假设相同版本号即可兼容。
 
@@ -430,6 +432,8 @@ ItemTextRightOffset
 - 人工启用真实输入前，先在日志模式运行并确认动作意图位置。
 
 ## 9. Phase 5：AutoDialogue 迁移
+
+> 状态：已于 2026-07-15 完成。Worker 支持 AutoDialogue get/set options 与 setEnabled，状态报告包含 Talk 分类、选项文本、决策、意图和 VAD/回退状态。DevHost 新增 `--feature auto-dialogue` 独立 observe-only 实机入口。所有等待均由 `IClock` 或单帧状态机驱动；Worker shutdown 在回复前停止调度、锁死输入并释放 loopback、截图、OCR 和模板资源。
 
 ### 5.1 基础对话推进
 

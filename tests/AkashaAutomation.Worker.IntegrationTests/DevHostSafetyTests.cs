@@ -11,12 +11,34 @@ public sealed class DevHostSafetyTests
         var options = DevHostOptions.Parse([]);
 
         Assert.Equal("F", options.PickKey);
+        Assert.Equal("auto-pick", options.Feature);
         Assert.Equal(100, options.IntervalMilliseconds);
         Assert.True(options.BlacklistEnabled);
         Assert.False(options.ShowAllFrames);
         Assert.Empty(options.UserExactBlacklist);
         Assert.Empty(options.UserFuzzyBlacklist);
         Assert.Empty(options.UserWhitelist);
+    }
+
+    [Fact]
+    public void Options_ShouldParseAutoDialogueObserveMode()
+    {
+        var options = DevHostOptions.Parse(
+        [
+            "--feature", "auto-dialogue",
+            "--option-strategy", "last",
+            "--custom-option", "优先项",
+            "--advance-key", "interaction",
+            "--voice-wait",
+            "--hangout-ending", "测试结局",
+        ]);
+
+        Assert.Equal("auto-dialogue", options.Feature);
+        Assert.Equal("Last", options.OptionStrategy);
+        Assert.Equal(["优先项"], options.CustomPriorityOptions);
+        Assert.Equal("Interaction", options.AdvanceKey);
+        Assert.True(options.VoiceWaitEnabled);
+        Assert.Equal("测试结局", options.HangoutEnding);
     }
 
     [Fact]

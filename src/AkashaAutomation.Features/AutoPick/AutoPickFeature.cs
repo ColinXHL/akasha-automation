@@ -50,6 +50,11 @@ public sealed class AutoPickFeature : IAutomationFeature
             return NoAction(frame, null, "disabled");
         }
 
+        if (context.IsTalk)
+        {
+            return NoAction(frame, null, "dialogue_active");
+        }
+
         var interaction = _recognizer.FindInteraction(frame, options.PickKey);
         if (!interaction.IsMatch || interaction.Region is null)
         {

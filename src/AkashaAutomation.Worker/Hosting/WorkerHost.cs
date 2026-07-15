@@ -7,8 +7,10 @@ using AkashaAutomation.Core.Recognition;
 using AkashaAutomation.Core.Scheduling;
 using AkashaAutomation.Core.Ocr;
 using AkashaAutomation.BetterGiPort.Compatibility.AutoPick;
+using AkashaAutomation.BetterGiPort.Compatibility.AutoSkip;
 using AkashaAutomation.BetterGiPort.Compatibility.Ocr;
 using AkashaAutomation.Features.AutoPick;
+using AkashaAutomation.Features.AutoDialogue;
 using AkashaAutomation.Worker.Configuration;
 using AkashaAutomation.Worker.Logging;
 using Microsoft.Extensions.DependencyInjection;
@@ -49,14 +51,16 @@ public static class WorkerHost
             new WorkerRuntime(
                 services.GetServices<IWorkerRuntimeResource>(),
                 services.GetRequiredService<ILoggerFactory>(),
-                autoPickController: services.GetRequiredService<IAutoPickController>()));
+                autoPickController: services.GetRequiredService<IAutoPickController>(),
+                autoDialogueController: services.GetRequiredService<IAutoDialogueController>()));
         builder.Services.AddSingleton<WorkerApplication>(services =>
             new WorkerApplication(
                 services.GetRequiredService<IParentProcessLifetime>(),
                 services.GetRequiredService<WorkerRuntime>(),
                 services.GetRequiredService<ILogger<WorkerApplication>>(),
                 inputArbiter: services.GetRequiredService<IInputArbiter>(),
-                autoPickController: services.GetRequiredService<IAutoPickController>()));
+                autoPickController: services.GetRequiredService<IAutoPickController>(),
+                autoDialogueController: services.GetRequiredService<IAutoDialogueController>()));
 
         var host = builder.Build();
         try
@@ -100,13 +104,31 @@ public static class WorkerHost
         services.AddSingleton(services => BetterGiPaddleOcrAssets.CreateV4Options(
             services.GetRequiredService<IAssetPathResolver>()));
         services.AddSingleton<IOcrEngine, PaddleOcrEngine>();
+        services.AddSingleton<BetterGiAutoDialogueRecognizer>();
+        services.AddSingleton<IGameUiContextClassifier>(services => services.GetRequiredService<BetterGiAutoDialogueRecognizer>());
         services.AddSingleton<IAutoPickController, AutoPickController>();
         services.AddSingleton<AutoPickFeature>();
         services.AddSingleton<IAutomationFeature>(services => services.GetRequiredService<AutoPickFeature>());
+        services.AddSingleton<IAutoDialogueController, AutoDialogueController>();
+        services.AddSingleton<IDialogueOptionVoiceWaiter, SileroDialogueOptionVoiceWaiter>();
+        services.AddSingleton<RewardDialogueSceneHandler>();
+        services.AddSingleton<HangoutDialogueSceneHandler>();
+        services.AddSingleton<PopupDialogueSceneHandler>();
+        services.AddSingleton<BlackScreenDialogueSceneHandler>();
+        services.AddSingleton<SubmitGoodsDialogueSceneHandler>();
+        services.AddSingleton<IAutoDialogueSceneHandler>(services => services.GetRequiredService<RewardDialogueSceneHandler>());
+        services.AddSingleton<IAutoDialogueSceneHandler>(services => services.GetRequiredService<HangoutDialogueSceneHandler>());
+        services.AddSingleton<IAutoDialogueSceneHandler>(services => services.GetRequiredService<PopupDialogueSceneHandler>());
+        services.AddSingleton<IAutoDialogueSceneHandler>(services => services.GetRequiredService<BlackScreenDialogueSceneHandler>());
+        services.AddSingleton<IAutoDialogueSceneHandler>(services => services.GetRequiredService<SubmitGoodsDialogueSceneHandler>());
+        services.AddSingleton<AutoDialogueFeature>();
+        services.AddSingleton<IAutomationFeature>(services => services.GetRequiredService<AutoDialogueFeature>());
         services.AddSingleton<ICaptureSource, WindowsGraphicsCaptureSource>();
         services.AddSingleton<IInputService, DisabledInputService>();
         services.AddSingleton<InputArbiter>();
         services.AddSingleton<IInputArbiter>(services => services.GetRequiredService<InputArbiter>());
+        services.AddSingleton<IWorkerRuntimeResource, AutoDialogueRuntimeResource>();
+        services.AddSingleton<IWorkerRuntimeResource, AutomationRecognitionRuntimeResource>();
         services.AddSingleton<IWorkerRuntimeResource, AutomationInputRuntimeResource>();
         services.AddSingleton<SingleFrameScheduler>();
         services.AddSingleton<AutomationSchedulerHostedService>();

@@ -5,6 +5,7 @@ using AkashaAutomation.Core.GameContext;
 using AkashaAutomation.Core.Input;
 using AkashaAutomation.Core.Recognition;
 using AkashaAutomation.Features.AutoPick;
+using AkashaAutomation.Features.AutoDialogue;
 using AkashaAutomation.Worker.Bridge;
 using AkashaAutomation.Worker.Configuration;
 using AkashaAutomation.Worker.Hosting;
@@ -27,12 +28,15 @@ public class WorkerApplicationTests
         var inputArbiter = new TrackingInputArbiter();
         var autoPickController = new AutoPickController(new RootedAssetPathResolver(AppContext.BaseDirectory));
         autoPickController.SetEnabled(true);
+        var autoDialogueController = new AutoDialogueController(new RootedAssetPathResolver(AppContext.BaseDirectory));
+        autoDialogueController.SetEnabled(true);
         var application = new WorkerApplication(
             parent,
-            new WorkerRuntime(autoPickController: autoPickController),
+            new WorkerRuntime(autoPickController: autoPickController, autoDialogueController: autoDialogueController),
             NullLogger<WorkerApplication>.Instance,
             inputArbiter: inputArbiter,
-            autoPickController: autoPickController);
+            autoPickController: autoPickController,
+            autoDialogueController: autoDialogueController);
         using var timeout = new CancellationTokenSource(TestTimeout);
 
         var workerTask = application.RunAsync(options, timeout.Token);
@@ -88,6 +92,7 @@ public class WorkerApplicationTests
         Assert.True(emergencyResponse.Payload.Value.GetProperty("active").GetBoolean());
         Assert.Equal(1, inputArbiter.EmergencyStopCount);
         Assert.False(autoPickController.Options.Enabled);
+        Assert.False(autoDialogueController.Options.Enabled);
 
         await protocol.WriteAsync(
             server,
@@ -103,6 +108,12 @@ public class WorkerApplicationTests
             stoppedStatusResponse.Payload.Value
                 .GetProperty("features")
                 .GetProperty("autoPick")
+                .GetProperty("isEnabled")
+                .GetBoolean());
+        Assert.False(
+            stoppedStatusResponse.Payload.Value
+                .GetProperty("features")
+                .GetProperty("autoDialogue")
                 .GetProperty("isEnabled")
                 .GetBoolean());
 

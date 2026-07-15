@@ -6,6 +6,7 @@ public enum InputActionKind
     KeyUp,
     KeyPress,
     MouseMove,
+    MouseMoveClient,
     MouseLeftClick,
 }
 
@@ -26,6 +27,9 @@ public sealed record InputAction(
 
     public static InputAction MouseMove(int x, int y) =>
         new(InputActionKind.MouseMove, X: x, Y: y);
+
+    public static InputAction MouseMoveClient(int x, int y) =>
+        new(InputActionKind.MouseMoveClient, X: x, Y: y);
 
     public static InputAction MouseLeftClick() => new(InputActionKind.MouseLeftClick);
 }

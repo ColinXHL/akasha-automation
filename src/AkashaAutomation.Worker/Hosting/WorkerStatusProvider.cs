@@ -1,13 +1,15 @@
 using AkashaAutomation.Worker.Bridge;
 using AkashaAutomation.Worker.Configuration;
 using AkashaAutomation.Features.AutoPick;
+using AkashaAutomation.Features.AutoDialogue;
 
 namespace AkashaAutomation.Worker.Hosting;
 
 public sealed class WorkerStatusProvider(
     WorkerStateMachine stateMachine,
     EmergencyStopController emergencyStop,
-    IAutoPickController? autoPickController = null)
+    IAutoPickController? autoPickController = null,
+    IAutoDialogueController? autoDialogueController = null)
 {
     private readonly object _errorGate = new();
     private WorkerErrorStatus? _lastError;
@@ -39,6 +41,21 @@ public sealed class WorkerStatusProvider(
                     autoPick.LastFrameSequence,
                     autoPick.UpdatedAtUtc),
             };
+        var autoDialogue = autoDialogueController?.Status;
+        var autoDialogueStatus = autoDialogue is null
+            ? new FeatureStatus(false, false)
+            : new FeatureStatus(autoDialogue.Enabled, autoDialogue.IsRunning)
+            {
+                DialogueRecognition = new AutoDialogueRecognitionStatus(
+                    autoDialogue.UiCategory,
+                    autoDialogue.LastRecognizedOptions,
+                    autoDialogue.LastDecisionReason,
+                    autoDialogue.LastIntentSubmitted,
+                    autoDialogue.VoiceWaitActive,
+                    autoDialogue.VoiceWaitFallback,
+                    autoDialogue.LastFrameSequence,
+                    autoDialogue.UpdatedAtUtc),
+            };
         return new WorkerStatus(
             ToProtocolState(stateMachine.State),
             CompanionProtocol.CurrentVersion,
@@ -55,7 +72,7 @@ public sealed class WorkerStatusProvider(
             new SubsystemStatus("not_started", false),
             new FeatureStatuses(
                 autoPickStatus,
-                new FeatureStatus(false, false)),
+                autoDialogueStatus),
             lastError);
     }
 

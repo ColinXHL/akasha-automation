@@ -30,7 +30,7 @@ public sealed class WindowsSendInputService : IInputService
             foreach (var action in actions.Actions)
             {
                 cancellationToken.ThrowIfCancellationRequested();
-                Execute(action);
+                Execute(action, context);
             }
         }
 
@@ -65,7 +65,7 @@ public sealed class WindowsSendInputService : IInputService
         _disposed = true;
     }
 
-    private void Execute(InputAction action)
+    private void Execute(InputAction action, GameContextSnapshot context)
     {
         switch (action.Kind)
         {
@@ -83,6 +83,15 @@ public sealed class WindowsSendInputService : IInputService
                 break;
             case InputActionKind.MouseMove:
                 SendMouseMove(action.X, action.Y);
+                break;
+            case InputActionKind.MouseMoveClient:
+                var point = new NativePoint(action.X, action.Y);
+                if (context.Window is null || !NativeMethods.ClientToScreen(context.Window.Handle, ref point))
+                {
+                    throw new Win32Exception(Marshal.GetLastWin32Error(), "Unable to map game client coordinates to the screen.");
+                }
+
+                SendMouseMove(point.X, point.Y);
                 break;
             case InputActionKind.MouseLeftClick:
                 SendMouse(NativeMethods.MouseEventLeftDown);
@@ -134,6 +143,19 @@ public sealed class WindowsSendInputService : IInputService
         if (sent != inputs.Length)
         {
             throw new Win32Exception(Marshal.GetLastWin32Error(), "SendInput did not submit every requested input.");
+        }
+    }
+
+    [StructLayout(LayoutKind.Sequential)]
+    private struct NativePoint
+    {
+        internal int X;
+        internal int Y;
+
+        internal NativePoint(int x, int y)
+        {
+            X = x;
+            Y = y;
         }
     }
 
@@ -210,5 +232,9 @@ public sealed class WindowsSendInputService : IInputService
 
         [DllImport("user32.dll")]
         internal static extern int GetSystemMetrics(int index);
+
+        [DllImport("user32.dll", SetLastError = true)]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        internal static extern bool ClientToScreen(nint windowHandle, ref NativePoint point);
     }
 }

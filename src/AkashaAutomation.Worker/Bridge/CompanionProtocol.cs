@@ -82,12 +82,24 @@ public sealed record FeatureStatus(
     bool IsRunning)
 {
     public AutoPickRecognitionStatus? Recognition { get; init; }
+
+    public AutoDialogueRecognitionStatus? DialogueRecognition { get; init; }
 }
 
 public sealed record AutoPickRecognitionStatus(
     string? Text,
     string Reason,
     bool IntentSubmitted,
+    long? FrameSequence,
+    DateTimeOffset? UpdatedAtUtc);
+
+public sealed record AutoDialogueRecognitionStatus(
+    string UiCategory,
+    IReadOnlyList<string> Options,
+    string Reason,
+    bool IntentSubmitted,
+    bool VoiceWaitActive,
+    bool VoiceWaitFallback,
     long? FrameSequence,
     DateTimeOffset? UpdatedAtUtc);
 

@@ -62,4 +62,25 @@ Six templates were selectively extracted byte-for-byte from the pinned BetterGI 
 
 The translation intentionally omits BetterGI UI/ViewModel state, `TaskContext`, message boxes, mouse-wheel fallback and direct input. The Phase 4 Worker registers `DisabledInputService`; real input remains opt-in work for release validation.
 
+## Imported AutoDialogue behavior, templates and VAD
+
+Phase 5 translates BetterGI `AutoSkipTrigger`, `AutoSkipConfig`, the AutoSkip recognition declarations, hangout configuration and the four audio/VAD classes from source commit `0eb90304c4e4fa1f5cee2a4cbf68de6c8200ec94`. Direct clicks, `Thread.Sleep`, global `TaskContext`, UI state and process lifetime calls were replaced by `AutomationIntent`, `IClock`, explicit Feature state and Worker runtime resources.
+
+From the pinned BetterGI `0.62.0` release archive, Phase 5 selectively imports:
+
+- 20 AutoSkip PNG templates under `GameTask/AutoSkip/Assets/1920x1080`, packaged below `Assets/Recognition/AutoSkip/1920x1080`;
+- `GameTask/AutoSkip/Assets/hangout.json`, packaged as `Assets/Config/Skip/hangout.json`;
+- `Assets/Model/Vad/LICENSE`, `README.md` and `silero_vad.onnx`.
+
+The exact source/target mapping, file sizes and every SHA-256 are authoritative in `upstream/bettergi/manifest.json` and independently mirrored in `upstream/bettergi/hashes.json`. The Silero model hash is `1a153a22f4509e292a94e67d6f9b85e8deb25b4988682b7e174c65279d8788e3`; its bundled MIT license hash is `840a2b8a9e6091a4edc7531318b9392b1d57dd9a587c83ca3f022731c0b0e858`.
+
+The local split is intentional:
+
+- `BetterGiPort/Upstream/AutoSkip` preserves option cleanup and priority rules.
+- `BetterGiPort/Compatibility/AutoSkip` preserves templates, 1080p ROI scaling, color/contour thresholds and special-scene recognition.
+- `BetterGiPort/Compatibility/Audio` preserves Silero inference and process-loopback sampling.
+- `Features/AutoDialogue` owns configuration, scheduler-driven waits, independent scene handlers and conversion to one action intent per frame.
+
+The Worker and DevHost continue to register only disabled/observe-only input services. Audio capture is released when AutoDialogue is disabled and before Worker shutdown acknowledgement.
+
 Future extraction work must add exact copied source files, models, copyright notices, material changes, and synchronization decisions here.

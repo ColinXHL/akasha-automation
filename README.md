@@ -10,7 +10,7 @@ The repository is intentionally independent from AkashaNavigator:
 
 The initial feature scope is automatic pickup and automatic dialogue derived from a pinned BetterGI source snapshot and matching runtime assets. The port is maintained behind an Akasha adapter boundary and may selectively adopt relevant BetterGI fixes at explicit release checkpoints; it does not continuously mirror upstream `main`.
 
-See [docs/design.md](docs/design.md) for the architecture, [docs/implementation-plan.md](docs/implementation-plan.md) for the staged implementation plan, [docs/companion-protocol.md](docs/companion-protocol.md) for the Worker interoperability contract, and [docs/devhost.md](docs/devhost.md) for independent real-game AutoPick testing.
+See [docs/design.md](docs/design.md) for the architecture, [docs/implementation-plan.md](docs/implementation-plan.md) for the staged implementation plan, [docs/companion-protocol.md](docs/companion-protocol.md) for the Worker interoperability contract, and [docs/devhost.md](docs/devhost.md) for independent observe-only real-game testing.
 
 ## Build
 
@@ -19,7 +19,7 @@ dotnet build
 dotnet test
 ```
 
-## Independent AutoPick testing
+## Independent real-game testing
 
 Run the observe-only DevHost without AkashaNavigator:
 
@@ -28,6 +28,12 @@ dotnet run --project .\src\AkashaAutomation.DevHost\AkashaAutomation.DevHost.csp
 ```
 
 The DevHost uses the real capture, template and PaddleOCR pipeline but contains no real input service. Press `Ctrl+C` to stop safely.
+
+Observe AutoDialogue instead:
+
+```powershell
+dotnet run --project .\src\AkashaAutomation.DevHost\AkashaAutomation.DevHost.csproj --configuration Release -- --feature auto-dialogue --option-strategy first
+```
 
 ## BetterGI assets
 
@@ -44,7 +50,7 @@ The import fails if an artifact hash, file hash, JSON structure, entry count, pa
 
 ## Repository status
 
-Phase 0 through Phase 4 are complete. The Worker includes guarded lifecycle management, capture, PaddleOCR, template recognition, AutoPick rules, a single-frame scheduler, Input Arbiter and stable status reporting. AkashaNavigator supervises the companion process, while the separate DevHost allows the same AutoPick pipeline to be tested against the real game without Navigator.
+Phase 0 through Phase 5 are complete. The Worker includes guarded lifecycle management, capture, PaddleOCR, template recognition, AutoPick and AutoDialogue rules, process-loopback Silero VAD with fixed-delay fallback, a single-frame scheduler, Input Arbiter and stable status reporting. AkashaNavigator supervises the companion process, while the separate DevHost allows either feature pipeline to be tested against the real game without Navigator.
 
 Run the real cross-repository smoke test from this repository when AkashaNavigator is in the sibling directory:
 
@@ -52,4 +58,4 @@ Run the real cross-repository smoke test from this repository when AkashaNavigat
 .\scripts\Test-NavigatorCompanion.ps1
 ```
 
-Real input remains unregistered in both the Worker and DevHost. AutoDialogue, plugin settings and release packaging remain for later phases.
+Real input remains unregistered in both the Worker and DevHost. Plugin settings and release packaging remain for later phases.

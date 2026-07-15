@@ -105,6 +105,9 @@ Protocol v1 currently supports:
 | `features.autoPick.getOptions` | Returns the normalized AutoPick options. |
 | `features.autoPick.setOptions` | Validates and atomically replaces AutoPick options and user lists. |
 | `features.autoPick.setEnabled` | Sets `{ enabled: boolean }` without replacing the remaining options. |
+| `features.autoDialogue.getOptions` | Returns the normalized AutoDialogue options. |
+| `features.autoDialogue.setOptions` | Validates and atomically replaces dialogue, option, special-scene and VAD options. |
+| `features.autoDialogue.setEnabled` | Sets `{ enabled: boolean }`; disabling immediately cancels an active voice wait. |
 
 AkashaNavigator may also send `{ "type": "shutdown" }` when no acknowledgement is required.
 
@@ -146,13 +149,21 @@ The message type vocabulary is `hello`, `welcome`, `request`, `response`, `event
     },
     "autoDialogue": {
       "isEnabled": false,
-      "isRunning": false
+      "isRunning": false,
+      "dialogueRecognition": {
+        "uiCategory": "Unknown",
+        "options": [],
+        "reason": "not_evaluated",
+        "intentSubmitted": false,
+        "voiceWaitActive": false,
+        "voiceWaitFallback": false
+      }
     }
   }
 }
 ```
 
-`lastError` is omitted until an error is reported. AutoPick recognition additionally reports the latest text, decision reason, intent-submission flag, frame sequence and timestamp once evaluated. An absent game window is normal: the Worker remains `ready`, and real input remains disabled.
+`lastError` is omitted until an error is reported. AutoPick reports the latest text and rule result. AutoDialogue reports Talk classification, recognized option texts, decision, VAD/fallback state, frame sequence and timestamp. An absent game window is normal: the Worker remains `ready`, and real input remains disabled.
 
 ## Lifecycle
 
@@ -184,5 +195,5 @@ Before a connection is attempted, the Worker confirms that the declared parent P
 - The token must never be included in errors or logs.
 - AkashaNavigator owns pipe ACL creation and constant-time token validation.
 - The Worker never accepts executable paths, working directories, environment variables or arbitrary command lines through the protocol.
-- Capture, OCR and AutoPick run only inside the Worker. The registered input service remains `DisabledInputService`, so `realInputEnabled` is always `false` in Phase 4.
+- Capture, OCR, AutoPick and AutoDialogue run only inside the Worker. The registered input service remains `DisabledInputService`, so `realInputEnabled` is always `false` through Phase 5.
 - Structured rolling logs are written below the current user's local application-data directory, never beside the installed Worker executable.

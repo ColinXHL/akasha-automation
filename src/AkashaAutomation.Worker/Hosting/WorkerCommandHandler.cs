@@ -1,13 +1,15 @@
 using System.Text.Json;
 using AkashaAutomation.Worker.Bridge;
 using AkashaAutomation.Features.AutoPick;
+using AkashaAutomation.Features.AutoDialogue;
 
 namespace AkashaAutomation.Worker.Hosting;
 
 public sealed class WorkerCommandHandler(
     WorkerStatusProvider statusProvider,
     EmergencyStopController emergencyStop,
-    IAutoPickController? autoPickController = null) : IWorkerCommandHandler
+    IAutoPickController? autoPickController = null,
+    IAutoDialogueController? autoDialogueController = null) : IWorkerCommandHandler
 {
     public ValueTask<CompanionEnvelope> HandleAsync(
         WorkerCommandContext command,
@@ -102,6 +104,61 @@ public sealed class WorkerCommandHandler(
             }
         }
 
+        if (request.Method.Equals("features.autoDialogue.getOptions", StringComparison.Ordinal))
+        {
+            return autoDialogueController is null
+                ? ValueTask.FromResult(UnavailableResponse(request, "AutoDialogue"))
+                : ValueTask.FromResult(SuccessResponse(
+                    request,
+                    JsonSerializer.SerializeToElement(autoDialogueController.Options, CompanionProtocol.JsonOptions)));
+        }
+
+        if (request.Method.Equals("features.autoDialogue.setEnabled", StringComparison.Ordinal))
+        {
+            if (autoDialogueController is null)
+            {
+                return ValueTask.FromResult(UnavailableResponse(request, "AutoDialogue"));
+            }
+
+            if (request.Payload is not { } enabledPayload ||
+                !enabledPayload.TryGetProperty("enabled", out var enabledElement) ||
+                enabledElement.ValueKind is not JsonValueKind.True and not JsonValueKind.False)
+            {
+                return ValueTask.FromResult(InvalidPayloadResponse(request, "AutoDialogue"));
+            }
+
+            autoDialogueController.SetEnabled(enabledElement.GetBoolean());
+            return ValueTask.FromResult(SuccessResponse(
+                request,
+                JsonSerializer.SerializeToElement(autoDialogueController.Options, CompanionProtocol.JsonOptions)));
+        }
+
+        if (request.Method.Equals("features.autoDialogue.setOptions", StringComparison.Ordinal))
+        {
+            if (autoDialogueController is null)
+            {
+                return ValueTask.FromResult(UnavailableResponse(request, "AutoDialogue"));
+            }
+
+            try
+            {
+                var options = request.Payload?.Deserialize<AutoDialogueOptions>(CompanionProtocol.JsonOptions);
+                if (options is null)
+                {
+                    return ValueTask.FromResult(InvalidPayloadResponse(request, "AutoDialogue"));
+                }
+
+                autoDialogueController.SetOptions(options);
+                return ValueTask.FromResult(SuccessResponse(
+                    request,
+                    JsonSerializer.SerializeToElement(autoDialogueController.Options, CompanionProtocol.JsonOptions)));
+            }
+            catch (Exception exception) when (exception is JsonException or ArgumentException)
+            {
+                return ValueTask.FromResult(InvalidPayloadResponse(request, "AutoDialogue"));
+            }
+        }
+
         if (request.Method.Equals("automation.emergencyStop", StringComparison.Ordinal))
         {
             emergencyStop.Trigger(WorkerStopReason.CompanionEmergencyStop);
@@ -134,19 +191,19 @@ public sealed class WorkerCommandHandler(
             Payload = payload,
         };
 
-    private static CompanionEnvelope InvalidPayloadResponse(CompanionEnvelope request) =>
+    private static CompanionEnvelope InvalidPayloadResponse(CompanionEnvelope request, string feature = "AutoPick") =>
         new()
         {
             Type = CompanionProtocol.Response,
             CorrelationId = request.CorrelationId,
-            Error = new CompanionError("invalid_payload", "The AutoPick payload is invalid."),
+            Error = new CompanionError("invalid_payload", $"The {feature} payload is invalid."),
         };
 
-    private static CompanionEnvelope UnavailableResponse(CompanionEnvelope request) =>
+    private static CompanionEnvelope UnavailableResponse(CompanionEnvelope request, string feature = "AutoPick") =>
         new()
         {
             Type = CompanionProtocol.Response,
             CorrelationId = request.CorrelationId,
-            Error = new CompanionError("feature_unavailable", "AutoPick is not registered."),
+            Error = new CompanionError("feature_unavailable", $"{feature} is not registered."),
         };
 }

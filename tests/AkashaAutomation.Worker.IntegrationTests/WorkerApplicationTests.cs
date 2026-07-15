@@ -1,5 +1,10 @@
 using System.IO.Pipes;
 using System.Text.Json;
+using AkashaAutomation.Core.Abstractions;
+using AkashaAutomation.Core.GameContext;
+using AkashaAutomation.Core.Input;
+using AkashaAutomation.Core.Recognition;
+using AkashaAutomation.Features.AutoPick;
 using AkashaAutomation.Worker.Bridge;
 using AkashaAutomation.Worker.Configuration;
 using AkashaAutomation.Worker.Hosting;
@@ -19,7 +24,15 @@ public class WorkerApplicationTests
         await using var server = CreateServer(pipeName);
         using var parent = new FakeParentProcessLifetime();
         var options = CreateOptions(pipeName);
-        var application = new WorkerApplication(parent);
+        var inputArbiter = new TrackingInputArbiter();
+        var autoPickController = new AutoPickController(new RootedAssetPathResolver(AppContext.BaseDirectory));
+        autoPickController.SetEnabled(true);
+        var application = new WorkerApplication(
+            parent,
+            new WorkerRuntime(autoPickController: autoPickController),
+            NullLogger<WorkerApplication>.Instance,
+            inputArbiter: inputArbiter,
+            autoPickController: autoPickController);
         using var timeout = new CancellationTokenSource(TestTimeout);
 
         var workerTask = application.RunAsync(options, timeout.Token);
@@ -73,6 +86,8 @@ public class WorkerApplicationTests
         var emergencyResponse = await protocol.ReadAsync(server, timeout.Token);
         Assert.True(emergencyResponse.Payload!.Value.GetProperty("accepted").GetBoolean());
         Assert.True(emergencyResponse.Payload.Value.GetProperty("active").GetBoolean());
+        Assert.Equal(1, inputArbiter.EmergencyStopCount);
+        Assert.False(autoPickController.Options.Enabled);
 
         await protocol.WriteAsync(
             server,
@@ -83,6 +98,12 @@ public class WorkerApplicationTests
             stoppedStatusResponse.Payload!.Value
                 .GetProperty("emergencyStop")
                 .GetProperty("isActive")
+                .GetBoolean());
+        Assert.False(
+            stoppedStatusResponse.Payload.Value
+                .GetProperty("features")
+                .GetProperty("autoPick")
+                .GetProperty("isEnabled")
                 .GetBoolean());
 
         await protocol.WriteAsync(
@@ -620,6 +641,27 @@ public class WorkerApplicationTests
             }
 
             throw new InvalidOperationException("The blocking command unexpectedly completed.");
+        }
+    }
+
+    private sealed class TrackingInputArbiter : IInputArbiter
+    {
+        private int _emergencyStopCount;
+
+        public int EmergencyStopCount => Volatile.Read(ref _emergencyStopCount);
+
+        public ValueTask<InputArbitrationResult> SubmitAsync(
+            long frameSequence,
+            GameContextSnapshot context,
+            IReadOnlyCollection<AutomationIntent> intents,
+            CancellationToken cancellationToken = default) =>
+            ValueTask.FromResult(new InputArbitrationResult(false, "test"));
+
+        public ValueTask EmergencyStopAsync(CancellationToken cancellationToken = default)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            Interlocked.Increment(ref _emergencyStopCount);
+            return ValueTask.CompletedTask;
         }
     }
 }

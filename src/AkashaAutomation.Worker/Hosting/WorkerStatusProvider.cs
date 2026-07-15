@@ -1,11 +1,13 @@
 using AkashaAutomation.Worker.Bridge;
 using AkashaAutomation.Worker.Configuration;
+using AkashaAutomation.Features.AutoPick;
 
 namespace AkashaAutomation.Worker.Hosting;
 
 public sealed class WorkerStatusProvider(
     WorkerStateMachine stateMachine,
-    EmergencyStopController emergencyStop)
+    EmergencyStopController emergencyStop,
+    IAutoPickController? autoPickController = null)
 {
     private readonly object _errorGate = new();
     private WorkerErrorStatus? _lastError;
@@ -25,6 +27,18 @@ public sealed class WorkerStatusProvider(
             lastError = _lastError;
         }
 
+        var autoPick = autoPickController?.Status;
+        var autoPickStatus = autoPick is null
+            ? new FeatureStatus(false, false)
+            : new FeatureStatus(autoPick.Enabled, autoPick.IsRunning)
+            {
+                Recognition = new AutoPickRecognitionStatus(
+                    autoPick.LastRecognizedText,
+                    autoPick.LastDecisionReason,
+                    autoPick.LastIntentSubmitted,
+                    autoPick.LastFrameSequence,
+                    autoPick.UpdatedAtUtc),
+            };
         return new WorkerStatus(
             ToProtocolState(stateMachine.State),
             CompanionProtocol.CurrentVersion,
@@ -40,7 +54,7 @@ public sealed class WorkerStatusProvider(
             new SubsystemStatus("not_started", false),
             new SubsystemStatus("not_started", false),
             new FeatureStatuses(
-                new FeatureStatus(false, false),
+                autoPickStatus,
                 new FeatureStatus(false, false)),
             lastError);
     }

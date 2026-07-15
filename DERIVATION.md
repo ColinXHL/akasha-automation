@@ -26,4 +26,40 @@ The following files were copied byte-for-byte from an installed BetterGI `0.62.0
 
 The authoritative machine-readable mapping is `upstream/bettergi/manifest.json`; `upstream/bettergi/hashes.json` is the package integrity inventory. No content changes were made to these four files. On 2026-07-14, the official release archive size and SHA-256 were verified, then all four declared files were selectively extracted from its `BetterGI/` archive root and matched the committed files byte-for-byte.
 
+## Imported PaddleOCR V4 runtime
+
+On 2026-07-15, six additional files were selectively extracted byte-for-byte from the same pinned BetterGI `0.62.0` release archive. They form the smallest verified PaddleOCR V4 set required by Phase 3:
+
+| BetterGI path | Size | SHA-256 |
+|---|---:|---|
+| `Assets/Model/PaddleOCR/README.md` | 271 | `195c0939e6ec90e99e10153c22778d4e8f18574cfbc776937796e3adfb950981` |
+| `Assets/Model/PaddleOCR/test_pp_ocr.png` | 126994 | `583caa82c158da88cbeb0bdb209ada6a7658fd43df306c2a2aa846700a4de376` |
+| `Assets/Model/PaddleOCR/Det/V4/PP-OCRv4_mobile_det_infer/inference.yml` | 956 | `7a71be98abcc1038fb0d10fad3efb58407fcd5ac4ac3fb45a5544c143bc4763e` |
+| `Assets/Model/PaddleOCR/Det/V4/PP-OCRv4_mobile_det_infer/slim.onnx` | 4764885 | `c0f2e256776e81d9e38f49e7cc2a37864a326ee8097e84adf30a8e0ebcc0b24b` |
+| `Assets/Model/PaddleOCR/Rec/V4/PP-OCRv4_mobile_rec_infer/inference.yml` | 60209 | `018c94645678dc492754754291705c4999f35c6e5be854a42b4f918fefd06ab4` |
+| `Assets/Model/PaddleOCR/Rec/V4/PP-OCRv4_mobile_rec_infer/slim.onnx` | 10826716 | `df79157f86aa181ee0daa43364203cfc892f98e2a1b425614a1c98e0b96d7393` |
+
+`PaddleOnnxOcrSessionFactory` is a local compatibility translation of the pinned BetterGI PP-OCRv4 preprocessing, DB text detection, and CTC decoding behavior. It deliberately depends on Core contracts rather than BetterGI static application state. The pinned preheat image is executed in tests through the real ONNX runtime, and session disposal is asserted.
+
+## Imported AutoPick behavior and templates
+
+Phase 4 translates the AutoPick behavior from BetterGI source commit `0eb90304c4e4fa1f5cee2a4cbf68de6c8200ec94`. The reviewed source paths are recorded in `upstream/bettergi/manifest.json`. The local split is intentional:
+
+- `BetterGiPort/Upstream/AutoPick` preserves OCR cleanup, text projection, hard-coded `DoNotPick` conditions, default/user list merging, and rule priority.
+- `BetterGiPort/Compatibility/AutoPick` translates BetterGI recognition assets, 1080p ROI constants and resolution scaling to Core capture/template contracts.
+- `Features/AutoPick` owns Akasha configuration, diagnostics and conversion of a successful decision to one `AutomationIntent`; it never calls `SendInput` directly.
+
+Six templates were selectively extracted byte-for-byte from the pinned BetterGI `0.62.0` release artifact on 2026-07-15:
+
+| BetterGI path | Packaged target below `Assets/Recognition/AutoPick/1920x1080` | Size | SHA-256 |
+|---|---|---:|---|
+| `GameTask/AutoPick/Assets/1920x1080/E.png` | `E.png` | 547 | `09cc25ef17a7aab56f147f40f4a1373ae3bce06fc966929cc8d34ef85e61cd55` |
+| `GameTask/AutoPick/Assets/1920x1080/F.png` | `F.png` | 515 | `ce0100ebf90a4c98e6b34b5ee3777d973c9ae05322972d552fc718817e66271b` |
+| `GameTask/AutoPick/Assets/1920x1080/G.png` | `G.png` | 914 | `724edac6d0da519ac44d7a973db51990a95cf9b80005d1973caaaabb684543d7` |
+| `GameTask/AutoPick/Assets/1920x1080/L.png` | `L.png` | 308 | `51008048871d25dbb5713de10cadfa3516c11047eb0675994b997cdc18910e87` |
+| `GameTask/AutoPick/Assets/1920x1080/icon_settings.png` | `icon_settings.png` | 960 | `3bc1a9010f337e6990aae0b88ef81b0ea5f4621465bdca45fb90dc0190b07537` |
+| `GameTask/AutoSkip/Assets/1920x1080/icon_option.png` | `icon_option.png` | 480 | `b4f03c5641447fc30f2a3a92ab189e0fbc55444985c9baeedd68d3d506e68505` |
+
+The translation intentionally omits BetterGI UI/ViewModel state, `TaskContext`, message boxes, mouse-wheel fallback and direct input. The Phase 4 Worker registers `DisabledInputService`; real input remains opt-in work for release validation.
+
 Future extraction work must add exact copied source files, models, copyright notices, material changes, and synchronization decisions here.

@@ -1,0 +1,73 @@
+using AkashaAutomation.Core.Abstractions;
+using AkashaAutomation.Core.Diagnostics;
+using AkashaAutomation.Core.Scheduling;
+using AkashaAutomation.Features.AutoPick;
+using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
+
+namespace AkashaAutomation.Worker.Hosting;
+
+public sealed class AutomationSchedulerHostedService : BackgroundService, IWorkerRuntimeResource
+{
+    private readonly SingleFrameScheduler _scheduler;
+    private readonly IAutoPickController _autoPickController;
+    private readonly IClock _clock;
+    private readonly IDiagnosticsSink _diagnostics;
+    private readonly ILogger<AutomationSchedulerHostedService> _logger;
+
+    public AutomationSchedulerHostedService(
+        SingleFrameScheduler scheduler,
+        IAutoPickController autoPickController,
+        IClock clock,
+        IDiagnosticsSink diagnostics,
+        ILogger<AutomationSchedulerHostedService> logger)
+    {
+        _scheduler = scheduler;
+        _autoPickController = autoPickController;
+        _clock = clock;
+        _diagnostics = diagnostics;
+        _logger = logger;
+    }
+
+    protected override async Task ExecuteAsync(CancellationToken stoppingToken)
+    {
+        while (!stoppingToken.IsCancellationRequested)
+        {
+            if (!_autoPickController.Options.Enabled)
+            {
+                await _clock.DelayAsync(TimeSpan.FromMilliseconds(100), stoppingToken).ConfigureAwait(false);
+                continue;
+            }
+
+            try
+            {
+                var result = await _scheduler.RunOnceAsync(stoppingToken).ConfigureAwait(false);
+                await _clock.DelayAsync(
+                    result.Captured ? TimeSpan.FromMilliseconds(50) : TimeSpan.FromMilliseconds(250),
+                    stoppingToken).ConfigureAwait(false);
+            }
+            catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
+            {
+                break;
+            }
+            catch (Exception exception)
+            {
+                _diagnostics.Write(
+                    new DiagnosticEvent(
+                        _clock.UtcNow,
+                        "scheduler",
+                        "loop_failed",
+                        new Dictionary<string, object?>
+                        {
+                            ["exceptionType"] = exception.GetType().FullName,
+                            ["message"] = exception.Message,
+                        }));
+                _logger.LogError(exception, "Automation scheduler iteration failed");
+                await _clock.DelayAsync(TimeSpan.FromMilliseconds(250), stoppingToken).ConfigureAwait(false);
+            }
+        }
+    }
+
+    async ValueTask IWorkerRuntimeResource.StopAsync(CancellationToken cancellationToken) =>
+        await StopAsync(cancellationToken).ConfigureAwait(false);
+}

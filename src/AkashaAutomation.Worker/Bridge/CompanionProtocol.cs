@@ -79,7 +79,17 @@ public sealed record SubsystemStatus(
 
 public sealed record FeatureStatus(
     bool IsEnabled,
-    bool IsRunning);
+    bool IsRunning)
+{
+    public AutoPickRecognitionStatus? Recognition { get; init; }
+}
+
+public sealed record AutoPickRecognitionStatus(
+    string? Text,
+    string Reason,
+    bool IntentSubmitted,
+    long? FrameSequence,
+    DateTimeOffset? UpdatedAtUtc);
 
 public sealed record FeatureStatuses(
     FeatureStatus AutoPick,

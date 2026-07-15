@@ -17,6 +17,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\..\src\AkashaAutomation.DevHost\AkashaAutomation.DevHost.csproj" />
     <ProjectReference Include="..\..\src\AkashaAutomation.Worker\AkashaAutomation.Worker.csproj" />
   </ItemGroup>
 

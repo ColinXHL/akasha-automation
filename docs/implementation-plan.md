@@ -4,13 +4,14 @@
 
 ## 1. 当前状态与实施起点
 
-当前仓库已完成 Phase 0、Phase 1 Companion Echo 纵向切片与 Phase 2 Worker Host；Core、Features 仍没有业务运行时代码：
+当前仓库已完成 Phase 0、Phase 1 Companion Echo 纵向切片、Phase 2 Worker Host、Phase 3 识别/回放基础设施与 Phase 4 AutoPick 纵向切片：
 
-- `AkashaAutomation.Core` 尚无运行时代码。
-- `AkashaAutomation.Features` 尚无 Feature 代码和素材。
-- `AkashaAutomation.Worker` 已实现 companion bridge、Generic Host、安全生命周期和稳定状态，尚未组合 Phase 3 业务运行时。
+- `AkashaAutomation.Core` 已具备截图帧所有权、回放、坐标换算、模板匹配、OCR、窗口上下文、输入与单帧调度契约和实现。
+- `AkashaAutomation.Features` 已具备 AutoPick 配置控制、识别/OCR/规则链、动作意图、诊断状态和调度宿主；AutoDialogue 尚未迁移。
+- `AkashaAutomation.DevHost` 提供不依赖 AkashaNavigator 的 AutoPick 真实游戏 observe-only 测试入口，强制使用无输入观察服务。
+- `AkashaAutomation.Worker` 已安全注册 Phase 3 Core 服务；真实 `SendInput` 实现不在 Host 注册，急停在回复前同步锁死 Core Input Arbiter。
 - 插件清单和 Echo 入口脚本已实现，设置面板尚未实现。
-- 帧回放数据、发行脚本和同步脚本尚未实现。
+- AutoPick 具备测试运行时生成的确定性 1080p/1440p 回放基线；真实游戏录制帧、发行脚本和同步脚本尚未实现。
 - AkashaNavigator 已实现 companion manifest、权限确认、进程管理和受限 JS API。
 
 截至 2026-07-14，Phase 0 首批成果已经落地：
@@ -27,6 +28,8 @@
 
 2026-07-15 已完成 Phase 2：Worker 使用 .NET Generic Host 作为 composition root；生命周期由 `WorkerStateMachine` 限制合法转换；`EmergencyStopController` 在断管、父进程退出和任何关闭路径中优先锁存；收包层持续独立读取管道并以高优先级处理急停和 shutdown，因此活动自动化命令不会阻塞安全控制；有界单读命令队列在停止时取消当前命令、丢弃尚未开始的缓冲命令并拒绝新命令；并发关闭共享同一个完成任务并按“急停、命令队列、逆序资源释放、回复 shutdown”执行。`worker.getStatus` 已扩展为稳定的 Worker、游戏窗口、捕获、OCR、Feature、急停和最后错误 DTO，并加入有限保留数量的结构化 JSON 滚动日志、序列化失败降级及未观察异常处理。没有游戏窗口时 Worker 保持 `Ready`，不注册也不产生真实输入。
 
+同日完成 Phase 3：Core 建立可释放帧/ROI、回放、识别、OCR、游戏上下文、输入和单帧调度边界；OpenCV 模板匹配、Windows Graphics Capture、PP-OCRv4 ONNX 和前台 SendInput 均有隔离实现。Worker 默认解析 `DisabledInputService`，高优先级急停在回复前同步锁死 Input Arbiter。PP-OCRv4 的最小模型集来自同一固定发行构件，并通过真实预热图推理及 Session 释放测试。
+
 真实联调已验证：重复启动复用同一 PID、`worker.echo` 往返一致、正常停止后无运行会话。该阶段仍未引入 OpenCV、OCR 或真实输入。
 
 因此，第一个可运行目标不是直接迁移自动剧情，而是完成一条安全的纵向链路：
@@ -41,7 +44,9 @@ Akasha 插件
 → 安全停止
 ```
 
-在这条链路通过前，禁止接入真实键鼠输入。
+Phase 3 已通过回放、真实 PaddleOCR 预热图和 Worker 安全注册测试。Phase 4 在接入首条业务链路时仍默认只记录动作意图；人工验收前禁止注册真实键鼠输入。
+
+2026-07-15 已完成 Phase 4：Worker 可通过协议启停和更新 AutoPick 配置，启用后由托管调度循环按单帧链路执行；识别结果进入 BetterGI 兼容规则层，再产生至多一个拾取意图并交由 Input Arbiter。默认 `DisabledInputService` 保持不变，急停会同步禁用 AutoPick 并锁死 Arbiter。
 
 ## 2. 已确定的实现决策
 
@@ -93,7 +98,7 @@ version: 0.62.1-alpha.2
 1. 可重复下载的 BetterGI Release 或 alpha 构件 URL。
 2. 完整构件 SHA-256。
 3. 从构件选择性解压上述文件后，逐文件哈希与本机取样一致，或记录差异原因。
-4. OCR、Yap 和 Silero VAD 模型的来源、许可证、路径和哈希。
+4. PP-OCRv4 模型的来源、路径和哈希已完成；Yap 和 Silero VAD 仍须在对应阶段补齐来源、许可证、路径和哈希。
 
 源码 commit 与运行资源使用两个独立 pin。选择源码提交时必须检查它是否新增、删除或改变运行资源要求；不默认假设相同版本号即可兼容。
 
@@ -302,6 +307,10 @@ Created
 
 ## 7. Phase 3：Core、识别与帧回放
 
+状态：已完成（2026-07-15）。
+
+已落地内容包括：明确所有权的 `CapturedFrame`/ROI、1080p/1440p 坐标换算、文件回放、OpenCV 模板匹配、PP-OCRv4 ONNX 识别、Windows Graphics Capture、隔离的前台 `SendInput`、虚拟时间、诊断记录、Recording/Disabled Input、单帧调度和急停优先的 Input Arbiter。最小 PaddleOCR V4 模型集从固定 BetterGI `0.62.0` 发行包白名单提取并纳入逐文件哈希清单。
+
 ### Core 接口
 
 优先定义以下最小接口，不提前复制 BetterGI 静态上下文：
@@ -355,6 +364,10 @@ FeatureDecision
 - 连续回放不会增长未释放的 Mat、OCR Session 或句柄数量。
 
 ## 8. Phase 4：AutoPick 首条业务纵向切片
+
+> 状态：已于 2026-07-15 完成。已从固定 BetterGI `0.62.0` 发行包白名单导入 E/F/G/L、对话和设置图标模板，并按固定 `0.62.1-alpha.2` 源码 commit 迁移 OCR 清洗、硬编码排除和名单优先级。Worker 新增 get/set options、setEnabled、最近识别状态及按启用状态运行的调度宿主；输入仍固定为 `DisabledInputService`。1080p/1440p 正负回放及规则、配置、急停测试均已覆盖。Profile 文件持久化仍按原计划归 Phase 6 插件体验实现。
+
+> 实机测试补充：增加独立 `AkashaAutomation.DevHost` 控制台入口，直接复用真实窗口发现、WGC、PaddleOCR、AutoPick Feature 和 Input Arbiter。它不引用 Worker 或 AkashaNavigator，不包含 `WindowsSendInputService`，只打印 `text`、`reason`、`wouldPress` 和仲裁结果。
 
 AutoPick 比 AutoDialogue 范围小，先用于验证完整的截图、识别、OCR、规则、动作意图和配置链路。
 

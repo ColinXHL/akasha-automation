@@ -77,6 +77,8 @@ AkashaAutomation.Worker
 └─ Input Arbiter
 ```
 
+开发与实机识别验收另提供 `AkashaAutomation.DevHost`。它直接组合 Core、BetterGiPort 与 Features，不连接 companion 协议，不进入插件发行包，并且只允许 observe-only 输入服务。
+
 运行流程：
 
 ```text
@@ -126,6 +128,9 @@ akasha-automation/
 │  │     ├─ Recognition/
 │  │     ├─ Models/
 │  │     └─ Assets/
+│  ├─ AkashaAutomation.DevHost/
+│  │  ├─ Program.cs
+│  │  └─ AutoPickDevHost.cs
 │  └─ AkashaAutomation.Worker/
 │     ├─ Bridge/
 │     ├─ Hosting/
@@ -216,6 +221,15 @@ Core ← BetterGiPort ← Features ← Worker
 - 在管道断开或父进程退出时停止输入并退出。
 
 Worker 使用 `WinExe`，不创建控制台窗口。首版按 `win-x64`、framework-dependent、非 single-file 发布，以避免 OpenCV、OCR 模型及原生 DLL 的单文件提取问题。Akasha 安装程序已经提供 .NET 8 Desktop Runtime 和 VC++ Runtime。
+
+### AkashaAutomation.DevHost
+
+仅用于开发阶段独立验证真实游戏窗口、截图、OCR 与 Feature 决策：
+
+- 不引用 AkashaNavigator 或 Worker companion 生命周期。
+- 不接受管道、令牌、父进程或真实输入参数。
+- 固定使用 observe-only 输入服务，在控制台输出本应提交的动作。
+- 发布目录与正式插件包隔离，避免把开发入口作为用户功能分发。
 
 ## 7. Companion 清单和 API
 

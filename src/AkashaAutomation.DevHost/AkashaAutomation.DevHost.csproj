@@ -1,0 +1,18 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <ItemGroup>
+    <ProjectReference Include="..\AkashaAutomation.Core\AkashaAutomation.Core.csproj" />
+    <ProjectReference Include="..\AkashaAutomation.BetterGiPort\AkashaAutomation.BetterGiPort.csproj" />
+    <ProjectReference Include="..\AkashaAutomation.Features\AkashaAutomation.Features.csproj" />
+  </ItemGroup>
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <RuntimeIdentifier>win-x64</RuntimeIdentifier>
+    <SelfContained>false</SelfContained>
+    <PublishSingleFile>false</PublishSingleFile>
+    <AssemblyName>AkashaAutomation.DevHost</AssemblyName>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+
+</Project>

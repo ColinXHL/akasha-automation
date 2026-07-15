@@ -10,7 +10,7 @@ The repository is intentionally independent from AkashaNavigator:
 
 The initial feature scope is automatic pickup and automatic dialogue derived from a pinned BetterGI source snapshot and matching runtime assets. The port is maintained behind an Akasha adapter boundary and may selectively adopt relevant BetterGI fixes at explicit release checkpoints; it does not continuously mirror upstream `main`.
 
-See [docs/design.md](docs/design.md) for the architecture, [docs/implementation-plan.md](docs/implementation-plan.md) for the staged implementation plan, and [docs/companion-protocol.md](docs/companion-protocol.md) for the Worker interoperability contract.
+See [docs/design.md](docs/design.md) for the architecture, [docs/implementation-plan.md](docs/implementation-plan.md) for the staged implementation plan, [docs/companion-protocol.md](docs/companion-protocol.md) for the Worker interoperability contract, and [docs/devhost.md](docs/devhost.md) for independent real-game AutoPick testing.
 
 ## Build
 
@@ -18,6 +18,16 @@ See [docs/design.md](docs/design.md) for the architecture, [docs/implementation-
 dotnet build
 dotnet test
 ```
+
+## Independent AutoPick testing
+
+Run the observe-only DevHost without AkashaNavigator:
+
+```powershell
+dotnet run --project .\src\AkashaAutomation.DevHost\AkashaAutomation.DevHost.csproj --configuration Release -- --pick-key F
+```
+
+The DevHost uses the real capture, template and PaddleOCR pipeline but contains no real input service. Press `Ctrl+C` to stop safely.
 
 ## BetterGI assets
 
@@ -34,7 +44,7 @@ The import fails if an artifact hash, file hash, JSON structure, entry count, pa
 
 ## Repository status
 
-Phase 0, the Phase 1 Companion Echo vertical slice, and Phase 2 Worker hosting are complete. The Worker now uses .NET Generic Host as its composition root and includes a guarded lifecycle state machine, latched emergency stop, bounded command queue, idempotent ordered shutdown, stable subsystem status, and structured rolling logs. AkashaNavigator validates the fixed companion manifest, confirms the high-risk permission, supervises a per-plugin process in a Job Object, exposes the restricted JavaScript API, and stops the Worker before plugin teardown or file replacement. The plugin skeleton starts the Worker and verifies Echo on load.
+Phase 0 through Phase 4 are complete. The Worker includes guarded lifecycle management, capture, PaddleOCR, template recognition, AutoPick rules, a single-frame scheduler, Input Arbiter and stable status reporting. AkashaNavigator supervises the companion process, while the separate DevHost allows the same AutoPick pipeline to be tested against the real game without Navigator.
 
 Run the real cross-repository smoke test from this repository when AkashaNavigator is in the sibling directory:
 
@@ -42,4 +52,4 @@ Run the real cross-repository smoke test from this repository when AkashaNavigat
 .\scripts\Test-NavigatorCompanion.ps1
 ```
 
-Phase 3 capture abstractions, recognition, OCR, virtual time, input arbitration, and frame replay remain unimplemented. No real input implementation is registered or enabled.
+Real input remains unregistered in both the Worker and DevHost. AutoDialogue, plugin settings and release packaging remain for later phases.

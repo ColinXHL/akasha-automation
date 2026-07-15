@@ -102,6 +102,9 @@ Protocol v1 currently supports:
 | `worker.getStatus` | Returns stable Worker, game-window, capture, OCR, Feature, emergency-stop and last-error status. |
 | `worker.shutdown` | Stops command intake, latches emergency stop, releases runtime resources, then acknowledges and exits. |
 | `automation.emergencyStop` | Bypasses the normal command queue, latches emergency stop immediately and returns `{ accepted: true, active: true }`. |
+| `features.autoPick.getOptions` | Returns the normalized AutoPick options. |
+| `features.autoPick.setOptions` | Validates and atomically replaces AutoPick options and user lists. |
+| `features.autoPick.setEnabled` | Sets `{ enabled: boolean }` without replacing the remaining options. |
 
 AkashaNavigator may also send `{ "type": "shutdown" }` when no acknowledgement is required.
 
@@ -135,7 +138,11 @@ The message type vocabulary is `hello`, `welcome`, `request`, `response`, `event
   "features": {
     "autoPick": {
       "isEnabled": false,
-      "isRunning": false
+      "isRunning": false,
+      "recognition": {
+        "reason": "not_evaluated",
+        "intentSubmitted": false
+      }
     },
     "autoDialogue": {
       "isEnabled": false,
@@ -145,7 +152,7 @@ The message type vocabulary is `hello`, `welcome`, `request`, `response`, `event
 }
 ```
 
-`lastError` is omitted until an error is reported. An absent game window is normal: the Worker remains `ready`, capture and OCR remain `not_started`, and real input remains disabled.
+`lastError` is omitted until an error is reported. AutoPick recognition additionally reports the latest text, decision reason, intent-submission flag, frame sequence and timestamp once evaluated. An absent game window is normal: the Worker remains `ready`, and real input remains disabled.
 
 ## Lifecycle
 
@@ -177,5 +184,5 @@ Before a connection is attempted, the Worker confirms that the declared parent P
 - The token must never be included in errors or logs.
 - AkashaNavigator owns pipe ACL creation and constant-time token validation.
 - The Worker never accepts executable paths, working directories, environment variables or arbitrary command lines through the protocol.
-- This phase contains no capture, OCR or input implementation. `realInputEnabled` is always `false`.
+- Capture, OCR and AutoPick run only inside the Worker. The registered input service remains `DisabledInputService`, so `realInputEnabled` is always `false` in Phase 4.
 - Structured rolling logs are written below the current user's local application-data directory, never beside the installed Worker executable.

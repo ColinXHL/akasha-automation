@@ -1,3 +1,14 @@
+using AkashaAutomation.Core.Abstractions;
+using AkashaAutomation.Core.Capture;
+using AkashaAutomation.Core.Diagnostics;
+using AkashaAutomation.Core.GameContext;
+using AkashaAutomation.Core.Input;
+using AkashaAutomation.Core.Recognition;
+using AkashaAutomation.Core.Scheduling;
+using AkashaAutomation.Core.Ocr;
+using AkashaAutomation.BetterGiPort.Compatibility.AutoPick;
+using AkashaAutomation.BetterGiPort.Compatibility.Ocr;
+using AkashaAutomation.Features.AutoPick;
 using AkashaAutomation.Worker.Configuration;
 using AkashaAutomation.Worker.Logging;
 using Microsoft.Extensions.DependencyInjection;
@@ -32,29 +43,75 @@ public static class WorkerHost
 
         builder.Services.AddSingleton(options);
         builder.Services.AddSingleton(parentProcess);
+        builder.Services.AddSafeAutomationCore();
         builder.Services.AddHostedService<WorkerExceptionObserver>();
         builder.Services.AddSingleton<WorkerRuntime>(services =>
             new WorkerRuntime(
                 services.GetServices<IWorkerRuntimeResource>(),
-                services.GetRequiredService<ILoggerFactory>()));
+                services.GetRequiredService<ILoggerFactory>(),
+                autoPickController: services.GetRequiredService<IAutoPickController>()));
         builder.Services.AddSingleton<WorkerApplication>(services =>
             new WorkerApplication(
                 services.GetRequiredService<IParentProcessLifetime>(),
                 services.GetRequiredService<WorkerRuntime>(),
-                services.GetRequiredService<ILogger<WorkerApplication>>()));
+                services.GetRequiredService<ILogger<WorkerApplication>>(),
+                inputArbiter: services.GetRequiredService<IInputArbiter>(),
+                autoPickController: services.GetRequiredService<IAutoPickController>()));
 
-        using var host = builder.Build();
-        await host.StartAsync(cancellationToken).ConfigureAwait(false);
+        var host = builder.Build();
         try
         {
-            return await host.Services
-                .GetRequiredService<WorkerApplication>()
-                .RunAsync(options, cancellationToken)
-                .ConfigureAwait(false);
+            await host.StartAsync(cancellationToken).ConfigureAwait(false);
+            try
+            {
+                return await host.Services
+                    .GetRequiredService<WorkerApplication>()
+                    .RunAsync(options, cancellationToken)
+                    .ConfigureAwait(false);
+            }
+            finally
+            {
+                await host.StopAsync(CancellationToken.None).ConfigureAwait(false);
+            }
         }
         finally
         {
-            await host.StopAsync(CancellationToken.None).ConfigureAwait(false);
+            if (host is IAsyncDisposable asyncDisposable)
+            {
+                await asyncDisposable.DisposeAsync().ConfigureAwait(false);
+            }
+            else
+            {
+                host.Dispose();
+            }
         }
+    }
+
+    public static IServiceCollection AddSafeAutomationCore(this IServiceCollection services)
+    {
+        services.AddSingleton<IClock, SystemClock>();
+        services.AddSingleton<IDiagnosticsSink, InMemoryDiagnosticsSink>();
+        services.AddSingleton<IAssetPathResolver>(_ => new RootedAssetPathResolver(AppContext.BaseDirectory));
+        services.AddSingleton<IGameWindowLocator>(_ => new WindowsGameWindowLocator());
+        services.AddSingleton<IGameContextProvider, GameContextProvider>();
+        services.AddSingleton<ITemplateMatcher, OpenCvTemplateMatcher>();
+        services.AddSingleton<BetterGiAutoPickRecognizer>();
+        services.AddSingleton<IPaddleOcrSessionFactory, PaddleOnnxOcrSessionFactory>();
+        services.AddSingleton(services => BetterGiPaddleOcrAssets.CreateV4Options(
+            services.GetRequiredService<IAssetPathResolver>()));
+        services.AddSingleton<IOcrEngine, PaddleOcrEngine>();
+        services.AddSingleton<IAutoPickController, AutoPickController>();
+        services.AddSingleton<AutoPickFeature>();
+        services.AddSingleton<IAutomationFeature>(services => services.GetRequiredService<AutoPickFeature>());
+        services.AddSingleton<ICaptureSource, WindowsGraphicsCaptureSource>();
+        services.AddSingleton<IInputService, DisabledInputService>();
+        services.AddSingleton<InputArbiter>();
+        services.AddSingleton<IInputArbiter>(services => services.GetRequiredService<InputArbiter>());
+        services.AddSingleton<IWorkerRuntimeResource, AutomationInputRuntimeResource>();
+        services.AddSingleton<SingleFrameScheduler>();
+        services.AddSingleton<AutomationSchedulerHostedService>();
+        services.AddSingleton<IHostedService>(services => services.GetRequiredService<AutomationSchedulerHostedService>());
+        services.AddSingleton<IWorkerRuntimeResource>(services => services.GetRequiredService<AutomationSchedulerHostedService>());
+        return services;
     }
 }

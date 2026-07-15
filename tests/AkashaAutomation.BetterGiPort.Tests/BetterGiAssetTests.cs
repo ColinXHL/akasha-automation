@@ -1,6 +1,11 @@
 using System.Text.Json;
 using System.Diagnostics;
 using AkashaAutomation.BetterGiPort.Assets;
+using AkashaAutomation.BetterGiPort.Compatibility.Ocr;
+using AkashaAutomation.Core.Capture;
+using AkashaAutomation.Core.Ocr;
+using AkashaAutomation.Core.Recognition;
+using OpenCvSharp;
 
 namespace AkashaAutomation.BetterGiPort.Tests;
 
@@ -9,9 +14,21 @@ public class BetterGiAssetTests
     private static readonly AssetExpectation[] Expectations =
     [
         new(BetterGiAssetPaths.DefaultPickBlacklist, "1129650653eed1ec7e81676b3f616895feb9433ab616efc98ac360232c7e7ea9", 4914, 4891),
+        new(BetterGiAssetPaths.AutoPickKeyE, "09cc25ef17a7aab56f147f40f4a1373ae3bce06fc966929cc8d34ef85e61cd55"),
+        new(BetterGiAssetPaths.AutoPickKeyF, "ce0100ebf90a4c98e6b34b5ee3777d973c9ae05322972d552fc718817e66271b"),
+        new(BetterGiAssetPaths.AutoPickKeyG, "724edac6d0da519ac44d7a973db51990a95cf9b80005d1973caaaabb684543d7"),
+        new(BetterGiAssetPaths.AutoPickKeyL, "51008048871d25dbb5713de10cadfa3516c11047eb0675994b997cdc18910e87"),
+        new(BetterGiAssetPaths.AutoPickSettingsIcon, "3bc1a9010f337e6990aae0b88ef81b0ea5f4621465bdca45fb90dc0190b07537"),
+        new(BetterGiAssetPaths.AutoPickChatIcon, "b4f03c5641447fc30f2a3a92ab189e0fbc55444985c9baeedd68d3d506e68505"),
         new(BetterGiAssetPaths.DefaultPauseOptions, "212962f57e0bb0c04d9c3af062be53ddd929573f0399bc29b4476ec646f2ef65", 66, 61),
         new(BetterGiAssetPaths.PauseOptions, "fcc7d1e985862f0e3b0cc59cad7312642f7e96a318a73fc7646c093701a08b5b", 5, 5),
         new(BetterGiAssetPaths.SelectOptions, "8585ca3368566a6efe15ef52a816494ac2469470d7ac3b806d3d329cb4b36e88", 1, 1),
+        new(BetterGiAssetPaths.PaddleOcrReadme, "195c0939e6ec90e99e10153c22778d4e8f18574cfbc776937796e3adfb950981"),
+        new(BetterGiAssetPaths.PaddleOcrTestImage, "583caa82c158da88cbeb0bdb209ada6a7658fd43df306c2a2aa846700a4de376"),
+        new(BetterGiAssetPaths.PaddleOcrV4DetectionConfig, "7a71be98abcc1038fb0d10fad3efb58407fcd5ac4ac3fb45a5544c143bc4763e"),
+        new(BetterGiAssetPaths.PaddleOcrV4DetectionModel, "c0f2e256776e81d9e38f49e7cc2a37864a326ee8097e84adf30a8e0ebcc0b24b"),
+        new(BetterGiAssetPaths.PaddleOcrV4RecognitionConfig, "018c94645678dc492754754291705c4999f35c6e5be854a42b4f918fefd06ab4"),
+        new(BetterGiAssetPaths.PaddleOcrV4RecognitionModel, "df79157f86aa181ee0daa43364203cfc892f98e2a1b425614a1c98e0b96d7393"),
     ];
 
     [Fact]
@@ -23,10 +40,12 @@ public class BetterGiAssetTests
             var path = Path.Combine(repositoryRoot, "src", "AkashaAutomation.BetterGiPort", expectation.RelativePath);
 
             BetterGiAssetIntegrity.VerifySha256(path, expectation.Sha256);
-            var values = BetterGiJsonList.Load(path);
-
-            Assert.Equal(expectation.Count, values.Count);
-            Assert.Equal(expectation.UniqueCount, values.Distinct(StringComparer.Ordinal).Count());
+            if (expectation.Count is { } expectedCount && expectation.UniqueCount is { } expectedUniqueCount)
+            {
+                var values = BetterGiJsonList.Load(path);
+                Assert.Equal(expectedCount, values.Count);
+                Assert.Equal(expectedUniqueCount, values.Distinct(StringComparer.Ordinal).Count());
+            }
         }
     }
 
@@ -112,6 +131,32 @@ public class BetterGiAssetTests
         Assert.Equal(
             "https://github.com/babalae/better-genshin-impact/releases/download/0.62.0/BetterGI_v0.62.0.7z",
             artifact.GetProperty("downloadUrl").GetString());
+    }
+
+    [Fact]
+    public async Task PaddleOcrV4_ShouldRecognizePinnedPreheatImageAndReleaseSessions()
+    {
+        var baseline = PaddleOcrEngine.ActiveSessions;
+        var resolver = new RootedAssetPathResolver(AppContext.BaseDirectory);
+        var options = BetterGiPaddleOcrAssets.CreateV4Options(resolver);
+        await using var engine = new PaddleOcrEngine(options, new PaddleOnnxOcrSessionFactory());
+        using var image = Cv2.ImRead(
+            resolver.Resolve(BetterGiAssetPaths.PaddleOcrTestImage),
+            ImreadModes.Color);
+        using var frame = CapturedFrame.TakeOwnership(
+            image.Clone(),
+            1,
+            DateTimeOffset.UnixEpoch,
+            "bettergi-paddle-preheat");
+
+        var result = await engine.RecognizeAsync(frame);
+
+        Assert.False(string.IsNullOrWhiteSpace(result.Text));
+        Assert.NotEmpty(result.Regions);
+        Assert.Equal(baseline + 1, PaddleOcrEngine.ActiveSessions);
+
+        await engine.DisposeAsync();
+        Assert.Equal(baseline, PaddleOcrEngine.ActiveSessions);
     }
 
     [Fact]
@@ -240,7 +285,11 @@ public class BetterGiAssetTests
         return new ProcessResult(process.ExitCode, output, error);
     }
 
-    private sealed record AssetExpectation(string RelativePath, string Sha256, int Count, int UniqueCount);
+    private sealed record AssetExpectation(
+        string RelativePath,
+        string Sha256,
+        int? Count = null,
+        int? UniqueCount = null);
 
     private sealed record ProcessResult(int ExitCode, string Output, string Error);
 }

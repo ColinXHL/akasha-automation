@@ -67,7 +67,7 @@ public sealed class PopupDialogueSceneHandler(BetterGiAutoDialogueRecognizer rec
         {
             return ValueTask.FromResult(DialogueSceneResult.Act(
                 "item_popup_triangle",
-                Click("auto-dialogue-item-popup", triangleRegion)));
+                Click("auto-dialogue-item-popup", triangleRegion, frame.Size)));
         }
 
         if (recognizer.FindCharacterPopup(frame) is not null)
@@ -76,14 +76,23 @@ public sealed class PopupDialogueSceneHandler(BetterGiAutoDialogueRecognizer rec
                 "character_popup",
                 new InputActionGroup(
                     "auto-dialogue-character-popup",
-                    [InputAction.MouseMoveClient(100, 100), InputAction.MouseLeftClick()])));
+                    [InputAction.MouseMoveClient(100, 100, frame.Size.Width, frame.Size.Height), InputAction.MouseLeftClick()])));
         }
 
         return ValueTask.FromResult(DialogueSceneResult.NoMatch("popup_not_found"));
     }
 
-    internal static InputActionGroup Click(string name, RegionOfInterest region) =>
-        new(name, [InputAction.MouseMoveClient(region.X + region.Width / 2, region.Y + region.Height / 2), InputAction.MouseLeftClick()]);
+    internal static InputActionGroup Click(string name, RegionOfInterest region, CaptureSize referenceSize) =>
+        new(
+            name,
+            [
+                InputAction.MouseMoveClient(
+                    region.X + region.Width / 2,
+                    region.Y + region.Height / 2,
+                    referenceSize.Width,
+                    referenceSize.Height),
+                InputAction.MouseLeftClick(),
+            ]);
 }
 
 public sealed class BlackScreenDialogueSceneHandler(BetterGiAutoDialogueRecognizer recognizer) : IAutoDialogueSceneHandler
@@ -112,7 +121,14 @@ public sealed class BlackScreenDialogueSceneHandler(BetterGiAutoDialogueRecogniz
             "black_screen",
             new InputActionGroup(
                 "auto-dialogue-black-screen",
-                [InputAction.MouseMoveClient(frame.Size.Width / 2, frame.Size.Height / 2), InputAction.MouseLeftClick()])));
+                [
+                    InputAction.MouseMoveClient(
+                        frame.Size.Width / 2,
+                        frame.Size.Height / 2,
+                        frame.Size.Width,
+                        frame.Size.Height),
+                    InputAction.MouseLeftClick(),
+                ])));
     }
 }
 
@@ -147,7 +163,7 @@ public sealed class SubmitGoodsDialogueSceneHandler(BetterGiAutoDialogueRecogniz
                 _stageExpiresUtc = evaluation.NowUtc.AddSeconds(5);
                 return ValueTask.FromResult(DialogueSceneResult.Act(
                     reason,
-                    PopupDialogueSceneHandler.Click($"auto-dialogue-{reason}", confirmRegion)));
+                    PopupDialogueSceneHandler.Click($"auto-dialogue-{reason}", confirmRegion, frame.Size)));
             }
         }
 
@@ -159,7 +175,7 @@ public sealed class SubmitGoodsDialogueSceneHandler(BetterGiAutoDialogueRecogniz
             _stageExpiresUtc = evaluation.NowUtc.AddSeconds(5);
             return ValueTask.FromResult(DialogueSceneResult.Act(
                 "submit_select_goods",
-                PopupDialogueSceneHandler.Click("auto-dialogue-submit-select", goodsRegion)));
+                PopupDialogueSceneHandler.Click("auto-dialogue-submit-select", goodsRegion, frame.Size)));
         }
 
         return ValueTask.FromResult(DialogueSceneResult.NoMatch("submit_not_found"));
@@ -222,7 +238,7 @@ public sealed class RewardDialogueSceneHandler(BetterGiAutoDialogueRecognizer re
             var target = new RegionOfInterest((int)(950 * scale), (int)(890 * scale), (int)(20 * scale), (int)(20 * scale));
             return ValueTask.FromResult(DialogueSceneResult.Act(
                 "daily_reward_collect",
-                PopupDialogueSceneHandler.Click("auto-dialogue-daily-reward", target)));
+                PopupDialogueSceneHandler.Click("auto-dialogue-daily-reward", target, frame.Size)));
         }
 
         if (_pending == PendingReward.ReExplore && evaluation.Configuration.Options.AutoReExploreEnabled)
@@ -232,7 +248,7 @@ public sealed class RewardDialogueSceneHandler(BetterGiAutoDialogueRecognizer re
                 _collected = true;
                 return ValueTask.FromResult(DialogueSceneResult.Act(
                     "expedition_collect",
-                    PopupDialogueSceneHandler.Click("auto-dialogue-expedition-collect", collect)));
+                    PopupDialogueSceneHandler.Click("auto-dialogue-expedition-collect", collect, frame.Size)));
             }
 
             if (_collected && recognizer.FindReExplore(frame) is { IsMatch: true, Region: { } reExplore })
@@ -240,7 +256,7 @@ public sealed class RewardDialogueSceneHandler(BetterGiAutoDialogueRecognizer re
                 _pending = PendingReward.None;
                 return ValueTask.FromResult(DialogueSceneResult.Act(
                     "expedition_reexplore",
-                    PopupDialogueSceneHandler.Click("auto-dialogue-expedition-reexplore", reExplore)));
+                    PopupDialogueSceneHandler.Click("auto-dialogue-expedition-reexplore", reExplore, frame.Size)));
             }
         }
 
@@ -286,7 +302,7 @@ public sealed class HangoutDialogueSceneHandler(BetterGiAutoDialogueRecognizer r
         {
             return DialogueSceneResult.Act(
                 "hangout_option",
-                PopupDialogueSceneHandler.Click("auto-dialogue-hangout-option", selected.Region),
+                PopupDialogueSceneHandler.Click("auto-dialogue-hangout-option", selected.Region, frame.Size),
                 candidates.Select(candidate => candidate.Text).ToArray());
         }
 
@@ -295,7 +311,7 @@ public sealed class HangoutDialogueSceneHandler(BetterGiAutoDialogueRecognizer r
         {
             return DialogueSceneResult.Act(
                 "hangout_skip",
-                PopupDialogueSceneHandler.Click("auto-dialogue-hangout-skip", skipRegion));
+                PopupDialogueSceneHandler.Click("auto-dialogue-hangout-skip", skipRegion, frame.Size));
         }
 
         return DialogueSceneResult.NoMatch("hangout_not_found");

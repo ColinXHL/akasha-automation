@@ -20,7 +20,8 @@
       "BetterGenshinImpact/GameTask/AutoSkip/Audio/SileroVadDetector.cs",
       "BetterGenshinImpact/GameTask/AutoSkip/Audio/ProcessLoopbackAudioCapture.cs",
       "BetterGenshinImpact/GameTask/AutoSkip/Audio/DialogueOptionVoiceDetector.cs",
-      "BetterGenshinImpact/GameTask/AutoSkip/Audio/DialogueOptionAudioWaiter.cs"
+      "BetterGenshinImpact/GameTask/AutoSkip/Audio/DialogueOptionAudioWaiter.cs",
+      "Fischless.WindowsInput/InputBuilder.cs"
     ]
   },
   "runtimeArtifact": {
@@ -370,6 +371,11 @@
       "scope": "AutoSkip",
       "decision": "translate",
       "description": "Preserve BetterGI dialogue option priority, 1080p template and color thresholds, special-scene recognition and Silero VAD timing while translating direct clicks and sleeps into scheduler-driven AutomationIntent state machines. BetterGI UI, global TaskContext and process lifetime dependencies are excluded."
+    },
+    {
+      "scope": "WindowsInput",
+      "decision": "translate",
+      "description": "Preserve BetterGI SendInput keyboard compatibility by supplying virtual key plus MapVirtualKey scan code, extended-key flags and batched key-down/key-up, while retaining Akasha foreground validation, arbitration and emergency-stop ownership."
     }
   ]
 }

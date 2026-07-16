@@ -49,6 +49,8 @@ Phase 4 translates the AutoPick behavior from BetterGI source commit `0eb90304c4
 - `BetterGiPort/Compatibility/AutoPick` translates BetterGI recognition assets, 1080p ROI constants and resolution scaling to Core capture/template contracts.
 - `Features/AutoPick` owns Akasha configuration, diagnostics and conversion of a successful decision to one `AutomationIntent`; it never calls `SendInput` directly.
 
+The live host uses BetterGI's default 50 ms dispatcher cadence and subtracts frame processing time before delaying. After BetterGI's text-rectangle refinement succeeds, AutoPick calls the recognition model directly without the detection model, matching BetterGI's `OcrWithoutDetector` fast path; multi-option AutoDialogue continues to use detection plus recognition.
+
 Six templates were selectively extracted byte-for-byte from the pinned BetterGI `0.62.0` release artifact on 2026-07-15:
 
 | BetterGI path | Packaged target below `Assets/Recognition/AutoPick/1920x1080` | Size | SHA-256 |
@@ -61,6 +63,8 @@ Six templates were selectively extracted byte-for-byte from the pinned BetterGI 
 | `GameTask/AutoSkip/Assets/1920x1080/icon_option.png` | `icon_option.png` | 480 | `b4f03c5641447fc30f2a3a92ab189e0fbc55444985c9baeedd68d3d506e68505` |
 
 The translation intentionally omits BetterGI UI/ViewModel state, `TaskContext`, message boxes, mouse-wheel fallback and direct input. The Phase 4 Worker registers `DisabledInputService`; real input remains opt-in work for release validation.
+
+The separate LiveTestHost exposed a real-game compatibility gap in the original local `WindowsSendInputService`: Windows accepted virtual-key-only input, but Genshin did not react. The corrected keyboard descriptor follows pinned BetterGI commit `0eb90304c4e4fa1f5cee2a4cbf68de6c8200ec94`, `Fischless.WindowsInput/InputBuilder.cs`: populate both `wVk` and the `MapVirtualKey` scan code, preserve extended-key flags, and submit key-down/key-up as one `SendInput` batch. Dialogue clicks still target the BetterGI OCR/template region center, while the local adapter additionally scales capture coordinates to the current game client and normalizes screen coordinates across the complete virtual desktop. The Akasha foreground checks, Input Arbiter and emergency stop remain local safety constraints.
 
 ## Imported AutoDialogue behavior, templates and VAD
 

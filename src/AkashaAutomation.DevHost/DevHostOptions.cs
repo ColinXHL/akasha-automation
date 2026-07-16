@@ -22,7 +22,7 @@ public sealed record DevHostOptions(
         ArgumentNullException.ThrowIfNull(args);
         var pickKey = "F";
         var feature = "auto-pick";
-        var interval = 100;
+        var interval = 50;
         var blacklistEnabled = true;
         var showAllFrames = false;
         var exactBlacklist = new List<string>();
@@ -131,7 +131,7 @@ public sealed record DevHostOptions(
         Options:
           --feature auto-pick|auto-dialogue  Feature to observe (default: auto-pick)
           --pick-key E|F|G          Interaction key template and virtual key (default: F)
-          --interval-ms 25..2000   Delay between frames (default: 100)
+          --interval-ms 25..2000   Target frame cadence (default: 50)
           --no-blacklist           Disable default and user blacklists
           --exact-blacklist TEXT   Add a user exact-blacklist entry; repeatable
           --fuzzy-blacklist TEXT   Add a user fuzzy-blacklist entry; repeatable

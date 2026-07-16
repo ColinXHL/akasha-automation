@@ -230,7 +230,7 @@ public sealed class AutoDialogueFeature : IAutomationFeature
             context,
             recognizedOptions,
             reason,
-            PopupDialogueSceneHandler.Click("auto-dialogue-option", candidate.Region)));
+            PopupDialogueSceneHandler.Click("auto-dialogue-option", candidate.Region, frame.Size)));
     }
 
     private FeatureDecision ToDecision(

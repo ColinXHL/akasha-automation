@@ -195,6 +195,46 @@ public sealed class ReplayAndRecognitionTests : IDisposable
 public sealed class ClockAndInputTests
 {
     [Fact]
+    public void MouseClientPoint_ShouldScaleCapturedFrameCoordinatesToCurrentClientSize()
+    {
+        var action = InputAction.MouseMoveClient(1280, 720, 2560, 1440);
+
+        var point = WindowsSendInputService.MapToClient(action, new CaptureSize(1920, 1080));
+
+        Assert.Equal(new WindowsClientPoint(960, 540), point);
+    }
+
+    [Fact]
+    public void MouseAbsolutePoint_ShouldUseTheWholeVirtualDesktopIncludingNegativeOrigin()
+    {
+        var leftEdge = WindowsSendInputService.DescribeVirtualDesktopMouseMove(-1920, 0, -1920, 0, 3840, 1080);
+        var rightEdge = WindowsSendInputService.DescribeVirtualDesktopMouseMove(1919, 1079, -1920, 0, 3840, 1080);
+
+        Assert.Equal(new WindowsMouseMoveDescriptor(0, 0), leftEdge);
+        Assert.Equal(new WindowsMouseMoveDescriptor(65535, 65535), rightEdge);
+    }
+
+    [Fact]
+    public void WindowsKeyboardInput_ShouldMatchBetterGiVirtualKeyAndScanCodeShape()
+    {
+        var press = WindowsSendInputService.DescribeKeyboardPress(0x46);
+        var rightArrow = WindowsSendInputService.DescribeKeyboardInput(0x27, keyUp: false);
+
+        Assert.Equal(2, press.Length);
+        Assert.All(press, input =>
+        {
+            Assert.Equal(0x46, input.VirtualKey);
+            Assert.NotEqual(0, input.ScanCode);
+            Assert.False(input.IsExtended);
+        });
+        Assert.False(press[0].IsKeyUp);
+        Assert.True(press[1].IsKeyUp);
+        Assert.Equal(press[0].ScanCode, press[1].ScanCode);
+        Assert.True(rightArrow.IsExtended);
+        Assert.NotEqual(0, rightArrow.ScanCode);
+    }
+
+    [Fact]
     public async Task FakeClock_CompletesDelayOnlyAfterVirtualTimeAdvances()
     {
         var clock = new FakeClock();
@@ -375,10 +415,14 @@ public sealed class PaddleOcrEngineTests : IDisposable
 
         var first = await engine.RecognizeAsync(frame, new RegionOfInterest(10, 5, 20, 10));
         var second = await engine.RecognizeAsync(frame);
+        var singleLine = await engine.RecognizeSingleLineAsync(frame, new RegionOfInterest(4, 6, 12, 8));
 
         Assert.Equal("20x10", first.Text);
         Assert.Equal(new RegionOfInterest(11, 7, 3, 4), Assert.Single(first.Regions).Region);
         Assert.Equal("40x30", second.Text);
+        Assert.Equal("single:12x8", singleLine.Text);
+        Assert.Equal(new RegionOfInterest(4, 6, 12, 8), Assert.Single(singleLine.Regions).Region);
+        Assert.Equal(1, factory.Session!.SingleLineCount);
         Assert.Equal(1, factory.CreateCount);
         Assert.Equal(baseline + 1, PaddleOcrEngine.ActiveSessions);
 
@@ -436,11 +480,22 @@ public sealed class PaddleOcrEngineTests : IDisposable
     {
         public bool Disposed { get; private set; }
 
+        public int SingleLineCount { get; private set; }
+
         public OcrResult Recognize(Mat image, CancellationToken cancellationToken = default) =>
             new(
                 $"{image.Width}x{image.Height}",
                 [new OcrTextRegion("text", 0.9, new RegionOfInterest(1, 2, 3, 4))],
                 TimeSpan.FromMilliseconds(1));
+
+        public OcrResult RecognizeSingleLine(Mat image, CancellationToken cancellationToken = default)
+        {
+            SingleLineCount++;
+            return new OcrResult(
+                $"single:{image.Width}x{image.Height}",
+                [new OcrTextRegion("single", 0.95, new RegionOfInterest(0, 0, image.Width, image.Height))],
+                TimeSpan.FromMilliseconds(1));
+        }
 
         public void Dispose() => Disposed = true;
     }

@@ -77,6 +77,31 @@ internal sealed class PaddleOnnxOcrSession : IPaddleOcrSession
             duration);
     }
 
+    public OcrResult RecognizeSingleLine(Mat image, CancellationToken cancellationToken = default)
+    {
+        ObjectDisposedException.ThrowIf(_disposed, this);
+        ArgumentNullException.ThrowIfNull(image);
+        cancellationToken.ThrowIfCancellationRequested();
+        if (image.Empty())
+        {
+            return OcrResult.Empty();
+        }
+
+        var started = Stopwatch.GetTimestamp();
+        using var source = EnsureBgr(image);
+        var recognized = RecognizeCrop(source, cancellationToken);
+        var regions = string.IsNullOrEmpty(recognized.Text)
+            ? []
+            : new[]
+            {
+                new OcrTextRegion(
+                    recognized.Text,
+                    recognized.Score,
+                    new RegionOfInterest(0, 0, source.Width, source.Height)),
+            };
+        return new OcrResult(recognized.Text, regions, Stopwatch.GetElapsedTime(started));
+    }
+
     public void Dispose()
     {
         if (_disposed)

@@ -18,6 +18,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\AkashaAutomation.DevHost\AkashaAutomation.DevHost.csproj" />
+    <ProjectReference Include="..\..\src\AkashaAutomation.LiveTestHost\AkashaAutomation.LiveTestHost.csproj" />
     <ProjectReference Include="..\..\src\AkashaAutomation.Worker\AkashaAutomation.Worker.csproj" />
   </ItemGroup>
 

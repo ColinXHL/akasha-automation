@@ -9,4 +9,10 @@ public interface IOcrEngine : IAsyncDisposable
         CapturedFrame frame,
         RegionOfInterest? region = null,
         CancellationToken cancellationToken = default);
+
+    ValueTask<OcrResult> RecognizeSingleLineAsync(
+        CapturedFrame frame,
+        RegionOfInterest region,
+        CancellationToken cancellationToken = default) =>
+        RecognizeAsync(frame, region, cancellationToken);
 }

@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using AkashaAutomation.BetterGiPort.Compatibility.AutoSkip;
 using AkashaAutomation.BetterGiPort.Compatibility.Ocr;
 using AkashaAutomation.Core.Capture;
@@ -80,6 +81,7 @@ public sealed class AutoDialogueDevHost(DevHostOptions options)
         {
             while (!cancellationToken.IsCancellationRequested)
             {
+                var started = Stopwatch.GetTimestamp();
                 try
                 {
                     var result = await scheduler.RunOnceAsync(cancellationToken).ConfigureAwait(false);
@@ -116,7 +118,15 @@ public sealed class AutoDialogueDevHost(DevHostOptions options)
                     }
                 }
 
-                await clock.DelayAsync(TimeSpan.FromMilliseconds(options.IntervalMilliseconds), cancellationToken).ConfigureAwait(false);
+                var remaining = TimeSpan.FromMilliseconds(options.IntervalMilliseconds) - Stopwatch.GetElapsedTime(started);
+                if (remaining > TimeSpan.Zero)
+                {
+                    await clock.DelayAsync(remaining, cancellationToken).ConfigureAwait(false);
+                }
+                else
+                {
+                    await Task.Yield();
+                }
             }
         }
         finally

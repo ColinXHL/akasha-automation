@@ -44,6 +44,28 @@ public sealed class PaddleOcrEngine : IOcrEngine
         }
     }
 
+    public async ValueTask<OcrResult> RecognizeSingleLineAsync(
+        CapturedFrame frame,
+        RegionOfInterest region,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(frame);
+        ObjectDisposedException.ThrowIf(_disposed, this);
+        await _gate.WaitAsync(cancellationToken).ConfigureAwait(false);
+        try
+        {
+            ObjectDisposedException.ThrowIf(_disposed, this);
+            var session = GetOrCreateSession();
+            using var cropped = frame.CloneRegion(region);
+            var result = cropped.UseImage(mat => session.RecognizeSingleLine(mat, cancellationToken));
+            return OffsetResult(result, region.X, region.Y);
+        }
+        finally
+        {
+            _gate.Release();
+        }
+    }
+
     public async ValueTask DisposeAsync()
     {
         await _gate.WaitAsync().ConfigureAwait(false);

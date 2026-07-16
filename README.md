@@ -10,7 +10,7 @@ The repository is intentionally independent from AkashaNavigator:
 
 The initial feature scope is automatic pickup and automatic dialogue derived from a pinned BetterGI source snapshot and matching runtime assets. The port is maintained behind an Akasha adapter boundary and may selectively adopt relevant BetterGI fixes at explicit release checkpoints; it does not continuously mirror upstream `main`.
 
-See [docs/design.md](docs/design.md) for the architecture, [docs/implementation-plan.md](docs/implementation-plan.md) for the staged implementation plan, [docs/companion-protocol.md](docs/companion-protocol.md) for the Worker interoperability contract, and [docs/devhost.md](docs/devhost.md) for independent observe-only real-game testing.
+See [docs/design.md](docs/design.md) for the architecture, [docs/implementation-plan.md](docs/implementation-plan.md) for the staged implementation plan, [docs/companion-protocol.md](docs/companion-protocol.md) for the Worker interoperability contract, and [docs/devhost.md](docs/devhost.md) for independent observe-only and real-input testing.
 
 ## Build
 
@@ -35,6 +35,8 @@ Observe AutoDialogue instead:
 dotnet run --project .\src\AkashaAutomation.DevHost\AkashaAutomation.DevHost.csproj --configuration Release -- --feature auto-dialogue --option-strategy first
 ```
 
+After the observe-only checks pass, publish the separate `AkashaAutomation.LiveTestHost` and run it without arguments from an administrator terminal. It exposes only AutoPick and AutoDialogue switches, then runs both selected features on BetterGI's 50 ms cadence; `Ctrl+C` stops the active session and `Ctrl+Alt+F12` is the foreground-game emergency stop. Follow [docs/devhost.md](docs/devhost.md).
+
 ## BetterGI assets
 
 Pinned BetterGI runtime configuration is committed under `AkashaAutomation.BetterGiPort` and is copied into Worker build and publish output. Normal builds never read a BetterGI installation and never download a BetterGI release.
@@ -58,4 +60,4 @@ Run the real cross-repository smoke test from this repository when AkashaNavigat
 .\scripts\Test-NavigatorCompanion.ps1
 ```
 
-Real input remains unregistered in both the Worker and DevHost. Plugin settings and release packaging remain for later phases.
+Real input remains unregistered in both the production Worker and permanent observe-only DevHost. The separate administrator-only LiveTestHost is a local acceptance tool with foreground enforcement and a global emergency stop. Plugin settings and release packaging remain for later phases.

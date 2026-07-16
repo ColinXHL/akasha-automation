@@ -96,7 +96,7 @@ public sealed class AutoPickFeature : IAutomationFeature
         }
 
         var refinedRegion = BetterGiTextRectExtractor.Refine(frame, textRegion);
-        var ocr = await _ocrEngine.RecognizeAsync(frame, refinedRegion, cancellationToken).ConfigureAwait(false);
+        var ocr = await _ocrEngine.RecognizeSingleLineAsync(frame, refinedRegion, cancellationToken).ConfigureAwait(false);
         var rule = BetterGiAutoPickRules.Decide(
             ocr.Text,
             excludeIcon.IsExcludeIcon,

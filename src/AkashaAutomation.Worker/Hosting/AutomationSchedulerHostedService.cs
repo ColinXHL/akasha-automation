@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using AkashaAutomation.Core.Abstractions;
 using AkashaAutomation.Core.Diagnostics;
 using AkashaAutomation.Core.Scheduling;
@@ -45,10 +46,18 @@ public sealed class AutomationSchedulerHostedService : BackgroundService, IWorke
 
             try
             {
+                var started = Stopwatch.GetTimestamp();
                 var result = await _scheduler.RunOnceAsync(stoppingToken).ConfigureAwait(false);
-                await _clock.DelayAsync(
-                    result.Captured ? TimeSpan.FromMilliseconds(50) : TimeSpan.FromMilliseconds(250),
-                    stoppingToken).ConfigureAwait(false);
+                var cadence = result.Captured ? TimeSpan.FromMilliseconds(50) : TimeSpan.FromMilliseconds(250);
+                var remaining = cadence - Stopwatch.GetElapsedTime(started);
+                if (remaining > TimeSpan.Zero)
+                {
+                    await _clock.DelayAsync(remaining, stoppingToken).ConfigureAwait(false);
+                }
+                else
+                {
+                    await Task.Yield();
+                }
             }
             catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
             {

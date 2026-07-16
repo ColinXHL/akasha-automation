@@ -130,7 +130,12 @@ public sealed class AutoDialogueFeatureTests
         var recording = Assert.Single(scenario.Input.Recordings);
         Assert.Collection(
             recording.Actions.Actions,
-            action => Assert.Equal(InputActionKind.MouseMoveClient, action.Kind),
+            action =>
+            {
+                Assert.Equal(InputActionKind.MouseMoveClient, action.Kind);
+                Assert.Equal(width, action.ReferenceWidth);
+                Assert.Equal(height, action.ReferenceHeight);
+            },
             action => Assert.Equal(InputActionKind.MouseLeftClick, action.Kind));
         Assert.Equal(GameUiCategory.Talk.ToString(), scenario.Controller.Status.UiCategory);
         Assert.Equal("继续前进", Assert.Single(scenario.Controller.Status.LastRecognizedOptions));

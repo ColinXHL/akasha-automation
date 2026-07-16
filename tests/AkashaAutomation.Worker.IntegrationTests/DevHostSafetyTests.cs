@@ -12,7 +12,7 @@ public sealed class DevHostSafetyTests
 
         Assert.Equal("F", options.PickKey);
         Assert.Equal("auto-pick", options.Feature);
-        Assert.Equal(100, options.IntervalMilliseconds);
+        Assert.Equal(50, options.IntervalMilliseconds);
         Assert.True(options.BlacklistEnabled);
         Assert.False(options.ShowAllFrames);
         Assert.Empty(options.UserExactBlacklist);

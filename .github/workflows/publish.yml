@@ -1,0 +1,134 @@
+name: Akasha Automation Plugin Publish
+run-name: "Akasha Automation ${{ github.event.inputs.version || github.ref_name }}"
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "插件版本（例如 0.3.1 或 0.4.0-alpha.1）"
+        required: true
+        type: string
+      draft:
+        description: "创建为 GitHub Release 草稿"
+        required: true
+        default: true
+        type: boolean
+
+permissions:
+  contents: read
+
+concurrency:
+  group: "plugin-release-${{ github.ref }}"
+  cancel-in-progress: false
+
+jobs:
+  validate:
+    name: Validate release version
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+      prerelease: ${{ steps.version.outputs.prerelease }}
+      draft: ${{ steps.version.outputs.draft }}
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Validate tag/input against plugin.json
+        id: version
+        shell: pwsh
+        run: |
+          if ("${{ github.event_name }}" -eq "workflow_dispatch") {
+              $version = "${{ github.event.inputs.version }}"
+              $draft = "${{ github.event.inputs.draft }}".ToLowerInvariant()
+          }
+          else {
+              $version = "${{ github.ref_name }}".TrimStart("v")
+              $draft = "false"
+          }
+
+          if ($version -notmatch '^[0-9]+\.[0-9]+\.[0-9]+(?:-[0-9A-Za-z.-]+)?(?:\+[0-9A-Za-z.-]+)?$') {
+              throw "版本号不符合语义化版本规范: $version"
+          }
+
+          $manifest = Get-Content "plugin/akasha-genshin-automation/plugin.json" -Raw | ConvertFrom-Json
+          if ([string]$manifest.version -ne $version) {
+              throw "发布版本 $version 与 plugin.json 版本 $($manifest.version) 不一致"
+          }
+
+          $prerelease = $version.Contains("-").ToString().ToLowerInvariant()
+          "version=$version" >> $env:GITHUB_OUTPUT
+          "prerelease=$prerelease" >> $env:GITHUB_OUTPUT
+          "draft=$draft" >> $env:GITHUB_OUTPUT
+
+  build:
+    name: Test and package plugin
+    runs-on: windows-latest
+    needs: validate
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: "8.0.x"
+
+      - name: Test, publish, and verify package
+        shell: pwsh
+        run: .\scripts\Publish-Plugin.ps1
+
+      - name: Verify release assets
+        shell: pwsh
+        run: |
+          $version = "${{ needs.validate.outputs.version }}"
+          $archive = "artifacts/release/akasha-genshin-automation-v$version.zip"
+          $checksum = "$archive.sha256"
+
+          if (-not (Test-Path -LiteralPath $archive -PathType Leaf)) {
+              throw "插件 ZIP 未生成: $archive"
+          }
+          if (-not (Test-Path -LiteralPath $checksum -PathType Leaf)) {
+              throw "SHA-256 文件未生成: $checksum"
+          }
+
+          $expectedHash = ((Get-Content -LiteralPath $checksum -Raw) -split '\s+')[0]
+          $actualHash = (Get-FileHash -LiteralPath $archive -Algorithm SHA256).Hash.ToLowerInvariant()
+          if ($expectedHash -ne $actualHash) {
+              throw "插件 ZIP 的 SHA-256 与校验文件不一致"
+          }
+
+      - uses: actions/upload-artifact@v6
+        with:
+          name: akasha-genshin-automation-v${{ needs.validate.outputs.version }}
+          path: |
+            artifacts/release/akasha-genshin-automation-v${{ needs.validate.outputs.version }}.zip
+            artifacts/release/akasha-genshin-automation-v${{ needs.validate.outputs.version }}.zip.sha256
+          if-no-files-found: error
+          retention-days: 14
+
+  create_release:
+    name: Create GitHub Release
+    runs-on: ubuntu-latest
+    needs:
+      - validate
+      - build
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v7
+        with:
+          name: akasha-genshin-automation-v${{ needs.validate.outputs.version }}
+          path: release
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: v${{ needs.validate.outputs.version }}
+          name: Akasha Genshin Automation v${{ needs.validate.outputs.version }}
+          draft: ${{ needs.validate.outputs.draft }}
+          prerelease: ${{ needs.validate.outputs.prerelease }}
+          generate_release_notes: true
+          fail_on_unmatched_files: true
+          files: |
+            release/akasha-genshin-automation-v${{ needs.validate.outputs.version }}.zip
+            release/akasha-genshin-automation-v${{ needs.validate.outputs.version }}.zip.sha256

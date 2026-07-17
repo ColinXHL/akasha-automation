@@ -72,4 +72,13 @@ The script runs the test suite, publishes the framework-dependent `win-x64` Work
 
 Akasha Automation is released from this independent GPL-3.0 repository. In a compatible AkashaNavigator build, open **插件中心 → 可用插件 → 从 ZIP 安装**, select the release ZIP, and then add the installed plugin to a Genshin Profile. Importing a newer ZIP updates the installed plugin while keeping Profile settings.
 
+GitHub Releases are produced by `.github/workflows/publish.yml`. Update the version in `plugin.json`, commit it, then push a matching tag:
+
+```powershell
+git tag v0.3.1
+git push origin v0.3.1
+```
+
+The tag workflow validates that the tag and manifest versions match, runs the complete package script on `windows-latest`, and publishes the ZIP plus its SHA-256 file. A manual workflow dispatch is also available for rebuilding or creating a draft release.
+
 Real input is enabled only by the production Worker under AkashaNavigator companion supervision. The permanent DevHost remains observe-only, while the separate administrator-only LiveTestHost is a local acceptance tool with foreground enforcement and a global emergency stop.

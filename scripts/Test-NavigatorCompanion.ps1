@@ -25,6 +25,8 @@ try {
     New-Item -ItemType Directory -Path $workerOutput, $harnessRoot -Force | Out-Null
     Copy-Item -LiteralPath (Join-Path $pluginTemplate "plugin.json") -Destination $pluginRoot
     Copy-Item -LiteralPath (Join-Path $pluginTemplate "main.js") -Destination $pluginRoot
+    Copy-Item -LiteralPath (Join-Path $pluginTemplate "settings_ui.json") -Destination $pluginRoot
+    Copy-Item -LiteralPath (Join-Path $pluginTemplate "README.md") -Destination $pluginRoot
 
     dotnet publish $workerProject `
         --configuration $Configuration `
@@ -96,10 +98,48 @@ var workerStatus = await manager.InvokeAsync(pluginId, "worker.getStatus", null)
 if (workerStatus is null ||
     workerStatus.Value.GetProperty("state").GetString() != "ready" ||
     workerStatus.Value.GetProperty("gameWindow").GetProperty("state").GetString() != "not_found" ||
-    workerStatus.Value.GetProperty("realInputEnabled").GetBoolean())
+    !workerStatus.Value.GetProperty("realInputEnabled").GetBoolean())
 {
-    throw new InvalidOperationException("Worker status did not describe the safe no-window Ready state.");
+    throw new InvalidOperationException("Worker status did not describe the foreground-only no-window Ready state.");
 }
+
+var autoPickOptions = JsonSerializer.SerializeToElement(new
+{
+    enabled = true,
+    pickKey = "E",
+    blackListEnabled = true,
+    userExactBlacklist = new[] { "测试精确项" },
+});
+var autoDialogueOptions = JsonSerializer.SerializeToElement(new
+{
+    enabled = true,
+    interactionKey = "E",
+    optionStrategy = "Last",
+    advanceKey = "Interaction",
+    beforeAdvanceDelayMilliseconds = 100,
+    afterOptionDelayMilliseconds = 200,
+    closePopupPagesEnabled = false,
+});
+var appliedAutoPick = await manager.InvokeAsync(pluginId, "features.autoPick.setOptions", autoPickOptions);
+var appliedAutoDialogue = await manager.InvokeAsync(pluginId, "features.autoDialogue.setOptions", autoDialogueOptions);
+if (appliedAutoPick is null || appliedAutoPick.Value.GetProperty("pickKey").GetString() != "E" ||
+    appliedAutoDialogue is null || appliedAutoDialogue.Value.GetProperty("optionStrategy").GetString() != "Last" ||
+    appliedAutoDialogue.Value.GetProperty("afterOptionDelayMilliseconds").GetInt32() != 200)
+{
+    throw new InvalidOperationException("Feature options were not applied by the Worker.");
+}
+
+var enabledStatus = await manager.InvokeAsync(pluginId, "worker.getStatus", null);
+if (enabledStatus is null ||
+    !enabledStatus.Value.GetProperty("features").GetProperty("autoPick").GetProperty("isEnabled").GetBoolean() ||
+    !enabledStatus.Value.GetProperty("features").GetProperty("autoDialogue").GetProperty("isEnabled").GetBoolean())
+{
+    throw new InvalidOperationException("Feature switches were not applied by the Worker.");
+}
+
+var disabledPayload = JsonSerializer.SerializeToElement(new { enabled = false });
+await manager.InvokeAsync(pluginId, "features.autoPick.setEnabled", disabledPayload);
+await manager.InvokeAsync(pluginId, "features.autoDialogue.setEnabled", disabledPayload);
 
 await manager.StopAsync(pluginId);
 if (manager.GetStatus(pluginId).Running)
@@ -107,7 +147,7 @@ if (manager.GetStatus(pluginId).Running)
     throw new InvalidOperationException("The companion was still running after stop.");
 }
 
-Console.WriteLine($"PASS process={first.ProcessId} echo=navigator-worker-echo status=ready/no-window stopped=true");
+Console.WriteLine($"PASS process={first.ProcessId} echo=navigator-worker-echo status=ready/no-window input=foreground-only options=true switches=true stopped=true");
 '@
     Set-Content -LiteralPath (Join-Path $harnessRoot "Program.cs") -Value $programFile -Encoding utf8
 

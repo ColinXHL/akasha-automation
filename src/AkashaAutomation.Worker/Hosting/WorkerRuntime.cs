@@ -12,11 +12,17 @@ public sealed class WorkerRuntime
         int commandQueueCapacity = WorkerCommandQueue.DefaultCapacity,
         Func<WorkerStatusProvider, EmergencyStopController, IWorkerCommandHandler>? commandHandlerFactory = null,
         IAutoPickController? autoPickController = null,
-        IAutoDialogueController? autoDialogueController = null)
+        IAutoDialogueController? autoDialogueController = null,
+        bool realInputEnabled = false)
     {
         StateMachine = new WorkerStateMachine();
         EmergencyStop = new EmergencyStopController();
-        StatusProvider = new WorkerStatusProvider(StateMachine, EmergencyStop, autoPickController, autoDialogueController);
+        StatusProvider = new WorkerStatusProvider(
+            StateMachine,
+            EmergencyStop,
+            autoPickController,
+            autoDialogueController,
+            realInputEnabled);
         CommandHandler = commandHandlerFactory?.Invoke(StatusProvider, EmergencyStop)
                          ?? new WorkerCommandHandler(StatusProvider, EmergencyStop, autoPickController, autoDialogueController);
         CommandQueue = new WorkerCommandQueue(

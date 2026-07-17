@@ -59,6 +59,8 @@ dotnet publish `
 
 自动剧情日志中的 `target=(x,y)@宽x高` 是本次识别得到的截图坐标。输入层会先按游戏当前客户区缩放，再转换为虚拟桌面坐标，因此支持窗口尺寸变化和多显示器位置。
 
+开发入口和正式 Worker 默认使用 BitBlt 截取游戏客户区，不会触发 Windows Graphics Capture 的黄色系统边框。
+
 ## 3. 建议顺序
 
 1. 用 DevHost 确认普通拾取物会产生 `pick`，烹饪/NPC/机关不会产生动作。

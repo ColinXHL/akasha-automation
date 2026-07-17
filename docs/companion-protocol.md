@@ -122,7 +122,7 @@ The message type vocabulary is `hello`, `welcome`, `request`, `response`, `event
   "workerVersion": "1.0.0",
   "parentProcessId": 1234,
   "startedAtUtc": "2026-07-15T00:00:00+00:00",
-  "realInputEnabled": false,
+  "realInputEnabled": true,
   "emergencyStop": {
     "isActive": false
   },
@@ -195,5 +195,5 @@ Before a connection is attempted, the Worker confirms that the declared parent P
 - The token must never be included in errors or logs.
 - AkashaNavigator owns pipe ACL creation and constant-time token validation.
 - The Worker never accepts executable paths, working directories, environment variables or arbitrary command lines through the protocol.
-- Capture, OCR, AutoPick and AutoDialogue run only inside the Worker. The registered input service remains `DisabledInputService`, so `realInputEnabled` is always `false` through Phase 5.
+- Capture, OCR, AutoPick, AutoDialogue and input run only inside the Worker. Phase 6 registers `WindowsSendInputService`; it rejects input unless the located game window is the current foreground window. Both Features remain disabled until the Profile-level plugin switches explicitly enable them.
 - Structured rolling logs are written below the current user's local application-data directory, never beside the installed Worker executable.

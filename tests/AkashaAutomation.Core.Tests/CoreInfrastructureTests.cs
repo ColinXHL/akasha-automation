@@ -413,6 +413,7 @@ public sealed class PaddleOcrEngineTests : IDisposable
             DateTimeOffset.UnixEpoch,
             "ocr");
 
+        await engine.WarmUpAsync();
         var first = await engine.RecognizeAsync(frame, new RegionOfInterest(10, 5, 20, 10));
         var second = await engine.RecognizeAsync(frame);
         var singleLine = await engine.RecognizeSingleLineAsync(frame, new RegionOfInterest(4, 6, 12, 8));
@@ -422,7 +423,8 @@ public sealed class PaddleOcrEngineTests : IDisposable
         Assert.Equal("40x30", second.Text);
         Assert.Equal("single:12x8", singleLine.Text);
         Assert.Equal(new RegionOfInterest(4, 6, 12, 8), Assert.Single(singleLine.Regions).Region);
-        Assert.Equal(1, factory.Session!.SingleLineCount);
+        Assert.Equal(2, factory.Session!.SingleLineCount);
+        Assert.Equal(3, factory.Session.RecognizeCount);
         Assert.Equal(1, factory.CreateCount);
         Assert.Equal(baseline + 1, PaddleOcrEngine.ActiveSessions);
 
@@ -482,11 +484,16 @@ public sealed class PaddleOcrEngineTests : IDisposable
 
         public int SingleLineCount { get; private set; }
 
-        public OcrResult Recognize(Mat image, CancellationToken cancellationToken = default) =>
-            new(
+        public int RecognizeCount { get; private set; }
+
+        public OcrResult Recognize(Mat image, CancellationToken cancellationToken = default)
+        {
+            RecognizeCount++;
+            return new(
                 $"{image.Width}x{image.Height}",
                 [new OcrTextRegion("text", 0.9, new RegionOfInterest(1, 2, 3, 4))],
                 TimeSpan.FromMilliseconds(1));
+        }
 
         public OcrResult RecognizeSingleLine(Mat image, CancellationToken cancellationToken = default)
         {

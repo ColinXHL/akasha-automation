@@ -95,8 +95,15 @@ public sealed class AutoPickFeature : IAutomationFeature
             return NoAction(frame, null, "text_roi_out_of_range");
         }
 
-        var refinedRegion = BetterGiTextRectExtractor.Refine(frame, textRegion);
-        var ocr = await _ocrEngine.RecognizeSingleLineAsync(frame, refinedRegion, cancellationToken).ConfigureAwait(false);
+        var textAnalysis = BetterGiTextRectExtractor.Analyze(frame, textRegion);
+        if (textAnalysis.IsPickAnimationInProgress)
+        {
+            return NoAction(frame, null, "pick_animation_in_progress");
+        }
+
+        var ocr = textAnalysis.UseDetector
+            ? await _ocrEngine.RecognizeAsync(frame, textRegion, cancellationToken).ConfigureAwait(false)
+            : await _ocrEngine.RecognizeSingleLineAsync(frame, textAnalysis.Region, cancellationToken).ConfigureAwait(false);
         var rule = BetterGiAutoPickRules.Decide(
             ocr.Text,
             excludeIcon.IsExcludeIcon,

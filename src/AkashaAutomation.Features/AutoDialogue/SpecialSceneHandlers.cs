@@ -21,7 +21,8 @@ public sealed record DialogueSceneEvaluation(
     AutoDialogueConfiguration Configuration,
     DateTimeOffset NowUtc,
     bool RecentlyInTalk,
-    long FrameSequence);
+    long FrameSequence,
+    bool? RecentlyInTalkForSubmit = null);
 
 public sealed record DialogueSceneResult(
     bool Handled,
@@ -40,6 +41,8 @@ public sealed record DialogueSceneResult(
 
 public sealed class PopupDialogueSceneHandler(BetterGiAutoDialogueRecognizer recognizer) : IAutoDialogueSceneHandler
 {
+    private DateTimeOffset _nextItemPopupUtc = DateTimeOffset.MinValue;
+
     public string Id => "popup";
 
     public ValueTask<DialogueSceneResult> EvaluateAsync(
@@ -62,9 +65,12 @@ public sealed class PopupDialogueSceneHandler(BetterGiAutoDialogueRecognizer rec
                 new InputActionGroup("auto-dialogue-popup-close", [InputAction.KeyPress(0x1B)])));
         }
 
-        var triangle = recognizer.FindBottomTriangle(frame);
+        var triangle = evaluation.NowUtc >= _nextItemPopupUtc
+            ? recognizer.FindBottomTriangle(frame)
+            : null;
         if (triangle is { } triangleRegion)
         {
+            _nextItemPopupUtc = evaluation.NowUtc.AddSeconds(1);
             return ValueTask.FromResult(DialogueSceneResult.Act(
                 "item_popup_triangle",
                 Click("auto-dialogue-item-popup", triangleRegion, frame.Size)));
@@ -97,6 +103,8 @@ public sealed class PopupDialogueSceneHandler(BetterGiAutoDialogueRecognizer rec
 
 public sealed class BlackScreenDialogueSceneHandler(BetterGiAutoDialogueRecognizer recognizer) : IAutoDialogueSceneHandler
 {
+    private DateTimeOffset _nextClickUtc = DateTimeOffset.MinValue;
+
     public string Id => "black-screen";
 
     public ValueTask<DialogueSceneResult> EvaluateAsync(
@@ -111,12 +119,18 @@ public sealed class BlackScreenDialogueSceneHandler(BetterGiAutoDialogueRecogniz
             return ValueTask.FromResult(DialogueSceneResult.NoMatch("talk_active"));
         }
 
+        if (evaluation.NowUtc < _nextClickUtc)
+        {
+            return ValueTask.FromResult(DialogueSceneResult.NoMatch("black_screen_cooldown"));
+        }
+
         var ratio = recognizer.GetBlackScreenRatio(frame);
         if (ratio is < 0.5 or >= 0.98999)
         {
             return ValueTask.FromResult(DialogueSceneResult.NoMatch("black_screen_threshold"));
         }
 
+        _nextClickUtc = evaluation.NowUtc.AddMilliseconds(1200);
         return ValueTask.FromResult(DialogueSceneResult.Act(
             "black_screen",
             new InputActionGroup(
@@ -146,7 +160,8 @@ public sealed class SubmitGoodsDialogueSceneHandler(BetterGiAutoDialogueRecogniz
         CancellationToken cancellationToken = default)
     {
         cancellationToken.ThrowIfCancellationRequested();
-        if (!evaluation.Configuration.Options.SubmitGoodsEnabled || !evaluation.RecentlyInTalk)
+        var recentlyInTalkForSubmit = evaluation.RecentlyInTalkForSubmit ?? evaluation.RecentlyInTalk;
+        if (!evaluation.Configuration.Options.SubmitGoodsEnabled || !recentlyInTalkForSubmit)
         {
             ResetIfExpired(evaluation.NowUtc);
             return ValueTask.FromResult(DialogueSceneResult.NoMatch("submit_inactive"));
@@ -273,6 +288,8 @@ public sealed class RewardDialogueSceneHandler(BetterGiAutoDialogueRecognizer re
 
 public sealed class HangoutDialogueSceneHandler(BetterGiAutoDialogueRecognizer recognizer) : IAutoDialogueSceneHandler
 {
+    private DateTimeOffset _nextActionUtc = DateTimeOffset.MinValue;
+
     public string Id => "hangout";
 
     public async ValueTask<DialogueSceneResult> EvaluateAsync(
@@ -285,6 +302,11 @@ public sealed class HangoutDialogueSceneHandler(BetterGiAutoDialogueRecognizer r
         if (!context.IsTalk || !options.AutoHangoutEnabled)
         {
             return DialogueSceneResult.NoMatch("hangout_inactive");
+        }
+
+        if (evaluation.NowUtc < _nextActionUtc)
+        {
+            return DialogueSceneResult.NoMatch("hangout_cooldown");
         }
 
         var candidates = await recognizer.FindHangoutOptionsAsync(frame, cancellationToken).ConfigureAwait(false);
@@ -300,6 +322,7 @@ public sealed class HangoutDialogueSceneHandler(BetterGiAutoDialogueRecognizer r
         selected ??= candidates.FirstOrDefault();
         if (selected is not null)
         {
+            _nextActionUtc = evaluation.NowUtc.AddMilliseconds(1200);
             return DialogueSceneResult.Act(
                 "hangout_option",
                 PopupDialogueSceneHandler.Click("auto-dialogue-hangout-option", selected.Region, frame.Size),
@@ -309,6 +332,7 @@ public sealed class HangoutDialogueSceneHandler(BetterGiAutoDialogueRecognizer r
         var skip = recognizer.FindHangoutSkip(frame);
         if (options.AutoHangoutSkipEnabled && skip.IsMatch && skip.Region is { } skipRegion)
         {
+            _nextActionUtc = evaluation.NowUtc.AddMilliseconds(1200);
             return DialogueSceneResult.Act(
                 "hangout_skip",
                 PopupDialogueSceneHandler.Click("auto-dialogue-hangout-skip", skipRegion, frame.Size));

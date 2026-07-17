@@ -21,6 +21,24 @@ public sealed class PaddleOcrEngine : IOcrEngine
 
     public static long ActiveSessions => Interlocked.Read(ref _activeSessions);
 
+    public async ValueTask WarmUpAsync(CancellationToken cancellationToken = default)
+    {
+        ObjectDisposedException.ThrowIf(_disposed, this);
+        await _gate.WaitAsync(cancellationToken).ConfigureAwait(false);
+        try
+        {
+            ObjectDisposedException.ThrowIf(_disposed, this);
+            var session = GetOrCreateSession();
+            using var image = new Mat(32, 32, MatType.CV_8UC3, Scalar.Black);
+            session.Recognize(image, cancellationToken);
+            session.RecognizeSingleLine(image, cancellationToken);
+        }
+        finally
+        {
+            _gate.Release();
+        }
+    }
+
     public async ValueTask<OcrResult> RecognizeAsync(
         CapturedFrame frame,
         RegionOfInterest? region = null,

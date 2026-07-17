@@ -9,7 +9,8 @@ public sealed class WorkerStatusProvider(
     WorkerStateMachine stateMachine,
     EmergencyStopController emergencyStop,
     IAutoPickController? autoPickController = null,
-    IAutoDialogueController? autoDialogueController = null)
+    IAutoDialogueController? autoDialogueController = null,
+    bool realInputEnabled = false)
 {
     private readonly object _errorGate = new();
     private WorkerErrorStatus? _lastError;
@@ -62,7 +63,7 @@ public sealed class WorkerStatusProvider(
             workerVersion,
             options.ParentProcessId,
             startedAtUtc,
-            false,
+            realInputEnabled,
             new EmergencyStopStatus(
                 emergency.IsActive,
                 emergency.Reason,

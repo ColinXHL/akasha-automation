@@ -32,6 +32,53 @@ public sealed class PluginPackageContractTests
         Assert.True(companion.GetProperty("singleInstance").GetBoolean());
     }
 
+    [Fact]
+    public void SettingsUi_DefaultsAndMainScript_ShouldStayInSyncWithManifest()
+    {
+        var repositoryRoot = FindRepositoryRoot();
+        var pluginRoot = Path.Combine(repositoryRoot, "plugin", "akasha-genshin-automation");
+        using var manifest = JsonDocument.Parse(File.ReadAllText(Path.Combine(pluginRoot, "plugin.json")));
+        using var settings = JsonDocument.Parse(File.ReadAllText(Path.Combine(pluginRoot, "settings_ui.json")));
+        var defaults = manifest.RootElement.GetProperty("defaultConfig");
+        var keyedItems = new List<(string Key, string DefaultJson)>();
+
+        foreach (var section in settings.RootElement.GetProperty("sections").EnumerateArray())
+        {
+            CollectKeyedItems(section.GetProperty("items"), keyedItems);
+        }
+
+        Assert.Equal(keyedItems.Count, keyedItems.Select(item => item.Key).Distinct(StringComparer.Ordinal).Count());
+        foreach (var item in keyedItems)
+        {
+            Assert.True(defaults.TryGetProperty(item.Key, out var manifestDefault), $"Missing manifest default: {item.Key}");
+            Assert.Equal(item.DefaultJson, manifestDefault.GetRawText());
+        }
+
+        var script = File.ReadAllText(Path.Combine(pluginRoot, "main.js"));
+        Assert.Contains("features.autoPick.setOptions", script, StringComparison.Ordinal);
+        Assert.Contains("features.autoDialogue.setOptions", script, StringComparison.Ordinal);
+        Assert.Contains("buildAutoPickOptions", script, StringComparison.Ordinal);
+        Assert.Contains("buildAutoDialogueOptions", script, StringComparison.Ordinal);
+    }
+
+    private static void CollectKeyedItems(
+        JsonElement items,
+        ICollection<(string Key, string DefaultJson)> destination)
+    {
+        foreach (var item in items.EnumerateArray())
+        {
+            if (item.TryGetProperty("key", out var key))
+            {
+                destination.Add((key.GetString()!, item.GetProperty("default").GetRawText()));
+            }
+
+            if (item.TryGetProperty("items", out var children))
+            {
+                CollectKeyedItems(children, destination);
+            }
+        }
+    }
+
     private static string FindRepositoryRoot()
     {
         var directory = new DirectoryInfo(AppContext.BaseDirectory);

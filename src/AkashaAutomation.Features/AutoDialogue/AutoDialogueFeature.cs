@@ -120,10 +120,23 @@ public sealed class AutoDialogueFeature : IAutomationFeature
             }
 
             CancelWait();
+            var interaction = _recognizer.FindDialogueInteraction(frame, configuration.Options.InteractionKey);
+            if (interaction.IsMatch)
+            {
+                return Act(
+                    frame,
+                    context,
+                    [],
+                    "dialogue_interaction_key",
+                    new InputActionGroup(
+                        "auto-dialogue-interaction",
+                        [InputAction.KeyPress(BetterGiAutoPickRecognizer.ToVirtualKey(configuration.Options.InteractionKey))]));
+            }
+
             var hangout = await _hangoutHandler.EvaluateAsync(
                 frame,
                 context,
-                new DialogueSceneEvaluation(configuration, now, true, frame.Sequence),
+                new DialogueSceneEvaluation(configuration, now, true, frame.Sequence, true),
                 cancellationToken).ConfigureAwait(false);
             if (hangout.Handled)
             {
@@ -159,8 +172,15 @@ public sealed class AutoDialogueFeature : IAutomationFeature
             return NoAction(frame, context, [], "action_cooldown");
         }
 
-        var recentlyInTalk = _lastTalkUtc is { } lastTalk && now - lastTalk <= TimeSpan.FromSeconds(3);
-        var evaluation = new DialogueSceneEvaluation(configuration, now, recentlyInTalk, frame.Sequence);
+        var elapsedSinceTalk = _lastTalkUtc is { } lastTalk ? now - lastTalk : TimeSpan.MaxValue;
+        var recentlyInTalk = elapsedSinceTalk <= TimeSpan.FromSeconds(10);
+        var recentlyInTalkForSubmit = elapsedSinceTalk <= TimeSpan.FromSeconds(3);
+        var evaluation = new DialogueSceneEvaluation(
+            configuration,
+            now,
+            recentlyInTalk,
+            frame.Sequence,
+            recentlyInTalkForSubmit);
         var reward = await _rewardHandler.EvaluateAsync(frame, context, evaluation, cancellationToken).ConfigureAwait(false);
         if (reward.Handled)
         {

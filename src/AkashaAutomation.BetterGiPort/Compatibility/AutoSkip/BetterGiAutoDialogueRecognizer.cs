@@ -1,5 +1,6 @@
 using System.Text.RegularExpressions;
 using AkashaAutomation.BetterGiPort.Assets;
+using AkashaAutomation.BetterGiPort.Compatibility.AutoPick;
 using AkashaAutomation.BetterGiPort.Upstream.AutoSkip;
 using AkashaAutomation.Core.Abstractions;
 using AkashaAutomation.Core.Capture;
@@ -82,7 +83,30 @@ public sealed partial class BetterGiAutoDialogueRecognizer : IGameUiContextClass
                 IsOrange(frame, region.Region)))
             .Where(candidate => candidate.Text.Length > 0)
             .ToArray();
-        return regions;
+        if (regions.Length > 0)
+        {
+            return regions;
+        }
+
+        // BetterGI still chooses by bubble position when Paddle returns no
+        // usable text. Top-to-bottom order preserves First/Last semantics.
+        return optionIcons
+            .OrderBy(region => region.Y)
+            .Select(region => new DialogueOptionCandidate(string.Empty, region))
+            .ToArray();
+    }
+
+    public RecognitionResult FindDialogueInteraction(CapturedFrame frame, string interactionKey)
+    {
+        var normalizedKey = BetterGiAutoPickRecognizer.NormalizePickKey(interactionKey);
+        var assetPath = normalizedKey switch
+        {
+            "E" => BetterGiAssetPaths.AutoPickKeyE,
+            "F" => BetterGiAssetPaths.AutoPickKeyF,
+            "G" => BetterGiAssetPaths.AutoPickKeyG,
+            _ => throw new ArgumentOutOfRangeException(nameof(interactionKey)),
+        };
+        return Match(frame, assetPath, DialogueInteractionSearchRegion(frame.Size));
     }
 
     public DialogueOptionCandidate? FindExclamationOption(CapturedFrame frame)
@@ -394,6 +418,16 @@ public sealed partial class BetterGiAutoDialogueRecognizer : IGameUiContextClass
     private static RegionOfInterest BottomLeft(CaptureSize size) => Clamp(size, 0, size.Height * 2 / 3, size.Width / 4, size.Height / 3);
     private static RegionOfInterest BottomRightCenter(CaptureSize size) => Clamp(size, size.Width / 2, size.Height * 3 / 4, size.Width / 4, size.Height / 4);
     private static RegionOfInterest OptionSearchRegion(CaptureSize size) => Clamp(size, size.Width / 2, size.Height / 12, size.Width / 3, size.Height - size.Height / 12 - 10);
+    private static RegionOfInterest DialogueInteractionSearchRegion(CaptureSize size)
+    {
+        var scale = AssetScale(size);
+        return Clamp(
+            size,
+            (int)(1200 * scale),
+            (int)(350 * scale),
+            (int)(50 * scale),
+            size.Height - (int)(570 * scale));
+    }
     private static RegionOfInterest Clamp(CaptureSize size, int x, int y, int width, int height) =>
         new RegionOfInterest(Math.Max(0, x), Math.Max(0, y), Math.Max(1, width), Math.Max(1, height)).Clamp(size);
 

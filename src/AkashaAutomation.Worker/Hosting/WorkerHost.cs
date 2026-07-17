@@ -45,14 +45,15 @@ public static class WorkerHost
 
         builder.Services.AddSingleton(options);
         builder.Services.AddSingleton(parentProcess);
-        builder.Services.AddSafeAutomationCore();
+        builder.Services.AddAutomationCore();
         builder.Services.AddHostedService<WorkerExceptionObserver>();
         builder.Services.AddSingleton<WorkerRuntime>(services =>
             new WorkerRuntime(
                 services.GetServices<IWorkerRuntimeResource>(),
                 services.GetRequiredService<ILoggerFactory>(),
                 autoPickController: services.GetRequiredService<IAutoPickController>(),
-                autoDialogueController: services.GetRequiredService<IAutoDialogueController>()));
+                autoDialogueController: services.GetRequiredService<IAutoDialogueController>(),
+                realInputEnabled: true));
         builder.Services.AddSingleton<WorkerApplication>(services =>
             new WorkerApplication(
                 services.GetRequiredService<IParentProcessLifetime>(),
@@ -91,7 +92,7 @@ public static class WorkerHost
         }
     }
 
-    public static IServiceCollection AddSafeAutomationCore(this IServiceCollection services)
+    public static IServiceCollection AddAutomationCore(this IServiceCollection services)
     {
         services.AddSingleton<IClock, SystemClock>();
         services.AddSingleton<IDiagnosticsSink, InMemoryDiagnosticsSink>();
@@ -123,8 +124,8 @@ public static class WorkerHost
         services.AddSingleton<IAutoDialogueSceneHandler>(services => services.GetRequiredService<SubmitGoodsDialogueSceneHandler>());
         services.AddSingleton<AutoDialogueFeature>();
         services.AddSingleton<IAutomationFeature>(services => services.GetRequiredService<AutoDialogueFeature>());
-        services.AddSingleton<ICaptureSource, WindowsGraphicsCaptureSource>();
-        services.AddSingleton<IInputService, DisabledInputService>();
+        services.AddSingleton<ICaptureSource, WindowsBitBltCaptureSource>();
+        services.AddSingleton<IInputService, WindowsSendInputService>();
         services.AddSingleton<InputArbiter>();
         services.AddSingleton<IInputArbiter>(services => services.GetRequiredService<InputArbiter>());
         services.AddSingleton<IWorkerRuntimeResource, AutoDialogueRuntimeResource>();

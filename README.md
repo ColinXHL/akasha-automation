@@ -60,4 +60,16 @@ Run the real cross-repository smoke test from this repository when AkashaNavigat
 .\scripts\Test-NavigatorCompanion.ps1
 ```
 
-Real input remains unregistered in both the production Worker and permanent observe-only DevHost. The separate administrator-only LiveTestHost is a local acceptance tool with foreground enforcement and a global emergency stop. Plugin settings and release packaging remain for later phases.
+## Release package
+
+Build and verify the installable plugin ZIP:
+
+```powershell
+.\scripts\Publish-Plugin.ps1
+```
+
+The script runs the test suite, publishes the framework-dependent `win-x64` Worker, includes the pinned BetterGI assets and legal notices, creates `package-manifest.json`, then extracts and verifies the finished ZIP. Outputs are written to `artifacts/release/`.
+
+Akasha Automation is released from this independent GPL-3.0 repository. In a compatible AkashaNavigator build, open **插件中心 → 可用插件 → 从 ZIP 安装**, select the release ZIP, and then add the installed plugin to a Genshin Profile. Importing a newer ZIP updates the installed plugin while keeping Profile settings.
+
+Real input is enabled only by the production Worker under AkashaNavigator companion supervision. The permanent DevHost remains observe-only, while the separate administrator-only LiveTestHost is a local acceptance tool with foreground enforcement and a global emergency stop.

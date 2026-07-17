@@ -185,6 +185,38 @@ public sealed class AutoPickFeatureTests
         Assert.Equal("「宝箱」", BetterGiAutoPickRules.ProcessOcrText("abc宝箱]"));
     }
 
+    [Fact]
+    public void TextExtraction_BlankRegion_ShouldRequestDetectorFallback()
+    {
+        using var frame = CapturedFrame.TakeOwnership(
+            new Mat(40, 300, MatType.CV_8UC3, Scalar.All(15)),
+            1,
+            DateTimeOffset.UnixEpoch,
+            "blank-pick-text");
+
+        var result = BetterGiTextRectExtractor.Extract(frame, new RegionOfInterest(0, 0, 300, 40));
+
+        Assert.True(result.UseDetector);
+        Assert.Equal(new RegionOfInterest(0, 0, 300, 40), result.Region);
+    }
+
+    [Fact]
+    public void PickAnimation_NegativeTopRowGradient_ShouldBeSuppressed()
+    {
+        using var image = new Mat(40, 300, MatType.CV_8UC3, Scalar.All(15));
+        for (var x = 0; x < image.Width; x++)
+        {
+            var value = (byte)Math.Clamp(255 - x * 4, 0, 255);
+            Cv2.Line(image, new Point(x, 0), new Point(x, 2), new Scalar(value, value, value));
+        }
+
+        using var frame = CapturedFrame.TakeOwnership(image.Clone(), 1, DateTimeOffset.UnixEpoch, "pick-animation");
+
+        Assert.True(BetterGiTextRectExtractor.IsPickAnimationInProgress(
+            frame,
+            new RegionOfInterest(0, 0, 300, 40)));
+    }
+
     private sealed class ReplayScenario : IAsyncDisposable
     {
         private readonly string _directory;

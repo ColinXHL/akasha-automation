@@ -20,7 +20,7 @@ public sealed class AutoDialogueDevHost(DevHostOptions options)
         var resolver = new RootedAssetPathResolver(AppContext.BaseDirectory);
         var windowLocator = new WindowsGameWindowLocator();
         var contextProvider = new GameContextProvider(windowLocator, clock);
-        await using var capture = new WindowsGraphicsCaptureSource(windowLocator, clock);
+        await using var capture = new WindowsBitBltCaptureSource(windowLocator, clock);
         await using var ocr = new PaddleOcrEngine(
             BetterGiPaddleOcrAssets.CreateV4Options(resolver),
             new PaddleOnnxOcrSessionFactory());

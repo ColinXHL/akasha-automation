@@ -7,9 +7,14 @@ namespace AkashaAutomation.Core.GameContext;
 
 public sealed class WindowsGameWindowLocator : IGameWindowLocator
 {
+    private const long CacheMilliseconds = 25;
     public static readonly IReadOnlyList<string> DefaultProcessNames = ["GenshinImpact", "YuanShen"];
 
     private readonly IReadOnlyList<string> _processNames;
+    private readonly object _cacheGate = new();
+    private GameWindowInfo? _cachedWindow;
+    private long _cachedAtMilliseconds;
+    private bool _cacheInitialized;
 
     public WindowsGameWindowLocator(IEnumerable<string>? processNames = null)
     {
@@ -26,6 +31,11 @@ public sealed class WindowsGameWindowLocator : IGameWindowLocator
     public ValueTask<GameWindowInfo?> LocateAsync(CancellationToken cancellationToken = default)
     {
         cancellationToken.ThrowIfCancellationRequested();
+        if (TryGetCached(out var cached))
+        {
+            return ValueTask.FromResult(cached);
+        }
+
         var foreground = NativeMethods.GetForegroundWindow();
         foreach (var processName in _processNames)
         {
@@ -47,7 +57,7 @@ public sealed class WindowsGameWindowLocator : IGameWindowLocator
                             continue;
                         }
 
-                        return ValueTask.FromResult<GameWindowInfo?>(
+                        return Cache(
                             new GameWindowInfo(
                                 handle,
                                 process.Id,
@@ -64,7 +74,35 @@ public sealed class WindowsGameWindowLocator : IGameWindowLocator
             }
         }
 
-        return ValueTask.FromResult<GameWindowInfo?>(null);
+        return Cache(null);
+    }
+
+    private bool TryGetCached(out GameWindowInfo? window)
+    {
+        lock (_cacheGate)
+        {
+            var now = Environment.TickCount64;
+            if (_cacheInitialized && now - _cachedAtMilliseconds <= CacheMilliseconds)
+            {
+                window = _cachedWindow;
+                return true;
+            }
+
+            window = null;
+            return false;
+        }
+    }
+
+    private ValueTask<GameWindowInfo?> Cache(GameWindowInfo? window)
+    {
+        lock (_cacheGate)
+        {
+            _cachedWindow = window;
+            _cachedAtMilliseconds = Environment.TickCount64;
+            _cacheInitialized = true;
+        }
+
+        return ValueTask.FromResult(window);
     }
 
     internal static class NativeMethods

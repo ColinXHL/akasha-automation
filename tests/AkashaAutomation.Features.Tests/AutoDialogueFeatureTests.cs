@@ -154,6 +154,45 @@ public sealed class AutoDialogueFeatureTests
     }
 
     [Fact]
+    public async Task Replay_OptionBubbleWithoutOcr_ShouldStillClickFirstBubble()
+    {
+        await using var scenario = await DialogueScenario.CreateAsync(
+            1920,
+            1080,
+            includeOption: true,
+            text: string.Empty);
+
+        var result = await scenario.Scheduler.RunOnceAsync();
+
+        var decision = Assert.Single(result.Decisions);
+        Assert.True(decision.ShouldAct);
+        Assert.Equal("fallback_first", decision.Reason);
+        Assert.Collection(
+            Assert.Single(scenario.Input.Recordings).Actions.Actions,
+            action => Assert.Equal(InputActionKind.MouseMoveClient, action.Kind),
+            action => Assert.Equal(InputActionKind.MouseLeftClick, action.Kind));
+    }
+
+    [Fact]
+    public async Task Replay_TalkInteractionPrompt_ShouldUseInteractionKey()
+    {
+        await using var scenario = await DialogueScenario.CreateAsync(
+            1920,
+            1080,
+            includeOption: false,
+            text: string.Empty,
+            dialogueInteractionKey: "F");
+
+        var result = await scenario.Scheduler.RunOnceAsync();
+
+        var decision = Assert.Single(result.Decisions);
+        Assert.Equal("dialogue_interaction_key", decision.Reason);
+        var action = Assert.Single(Assert.Single(scenario.Input.Recordings).Actions.Actions);
+        Assert.Equal(InputActionKind.KeyPress, action.Kind);
+        Assert.Equal((ushort)'F', action.VirtualKey);
+    }
+
+    [Fact]
     public async Task Replay_NonTalkSimilarFrame_ShouldNotSubmitDialogueIntent()
     {
         await using var scenario = await DialogueScenario.CreateAsync(1920, 1080, includeOption: true, "不应选择", includeTalkMarker: false);
@@ -599,7 +638,8 @@ public sealed class AutoDialogueFeatureTests
             int height,
             bool includeOption,
             string text,
-            bool includeTalkMarker = true)
+            bool includeTalkMarker = true,
+            string? dialogueInteractionKey = null)
         {
             var directory = Path.Combine(Path.GetTempPath(), $"akasha-dialogue-{Guid.NewGuid():N}");
             Directory.CreateDirectory(directory);
@@ -615,6 +655,18 @@ public sealed class AutoDialogueFeatureTests
                 if (includeOption)
                 {
                     PlaceTemplate(image, BetterGiAssetPaths.AutoSkipOptionIcon, scale, (int)(1000 * scale), (int)(300 * scale));
+                }
+
+                if (dialogueInteractionKey is not null)
+                {
+                    var keyAsset = dialogueInteractionKey switch
+                    {
+                        "E" => BetterGiAssetPaths.AutoPickKeyE,
+                        "F" => BetterGiAssetPaths.AutoPickKeyF,
+                        "G" => BetterGiAssetPaths.AutoPickKeyG,
+                        _ => throw new ArgumentOutOfRangeException(nameof(dialogueInteractionKey)),
+                    };
+                    PlaceTemplate(image, keyAsset, scale, (int)(1210 * scale), (int)(400 * scale));
                 }
 
                 Assert.True(Cv2.ImWrite(path, image));

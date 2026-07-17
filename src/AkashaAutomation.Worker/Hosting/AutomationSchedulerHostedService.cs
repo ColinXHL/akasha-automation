@@ -14,6 +14,7 @@ public sealed class AutomationSchedulerHostedService : BackgroundService, IWorke
     private readonly SingleFrameScheduler _scheduler;
     private readonly IAutoPickController _autoPickController;
     private readonly IAutoDialogueController _autoDialogueController;
+    private readonly IOcrEngine _ocrEngine;
     private readonly IClock _clock;
     private readonly IDiagnosticsSink _diagnostics;
     private readonly ILogger<AutomationSchedulerHostedService> _logger;
@@ -22,6 +23,7 @@ public sealed class AutomationSchedulerHostedService : BackgroundService, IWorke
         SingleFrameScheduler scheduler,
         IAutoPickController autoPickController,
         IAutoDialogueController autoDialogueController,
+        IOcrEngine ocrEngine,
         IClock clock,
         IDiagnosticsSink diagnostics,
         ILogger<AutomationSchedulerHostedService> logger)
@@ -29,6 +31,7 @@ public sealed class AutomationSchedulerHostedService : BackgroundService, IWorke
         _scheduler = scheduler;
         _autoPickController = autoPickController;
         _autoDialogueController = autoDialogueController;
+        _ocrEngine = ocrEngine;
         _clock = clock;
         _diagnostics = diagnostics;
         _logger = logger;
@@ -36,6 +39,24 @@ public sealed class AutomationSchedulerHostedService : BackgroundService, IWorke
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
+        await Task.Yield();
+        try
+        {
+            var started = Stopwatch.GetTimestamp();
+            await _ocrEngine.WarmUpAsync(stoppingToken).ConfigureAwait(false);
+            _logger.LogInformation(
+                "OCR warm-up completed in {ElapsedMilliseconds:F0} ms",
+                Stopwatch.GetElapsedTime(started).TotalMilliseconds);
+        }
+        catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
+        {
+            return;
+        }
+        catch (Exception exception)
+        {
+            _logger.LogWarning(exception, "OCR warm-up failed; recognition will retry on demand");
+        }
+
         while (!stoppingToken.IsCancellationRequested)
         {
             if (!_autoPickController.Options.Enabled && !_autoDialogueController.Options.Enabled)

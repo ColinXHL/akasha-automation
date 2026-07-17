@@ -13,22 +13,21 @@ using Microsoft.Extensions.Hosting;
 
 namespace AkashaAutomation.Worker.IntegrationTests;
 
-public sealed class SafeCoreRegistrationTests
+public sealed class AutomationCoreRegistrationTests
 {
     [Fact]
-    public async Task AddSafeAutomationCore_RegistersCaptureButNeverRealInput()
+    public async Task AddAutomationCore_RegistersForegroundOnlyRealInput()
     {
         var services = new ServiceCollection();
         services.AddLogging();
-        services.AddSafeAutomationCore();
+        services.AddAutomationCore();
         await using var provider = services.BuildServiceProvider();
 
         var input = provider.GetRequiredService<IInputService>();
         var capture = provider.GetRequiredService<ICaptureSource>();
 
-        Assert.IsType<DisabledInputService>(input);
-        Assert.IsNotType<WindowsSendInputService>(input);
-        Assert.IsType<WindowsGraphicsCaptureSource>(capture);
+        Assert.IsType<WindowsSendInputService>(input);
+        Assert.IsType<WindowsBitBltCaptureSource>(capture);
         Assert.IsType<InputArbiter>(provider.GetRequiredService<IInputArbiter>());
         var runtimeResources = provider.GetServices<IWorkerRuntimeResource>().ToArray();
         Assert.Contains(runtimeResources, resource => resource is AutomationInputRuntimeResource);

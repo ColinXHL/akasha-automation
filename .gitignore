@@ -10,6 +10,8 @@ dist/
 *.suo
 *.nupkg
 *.snupkg
+__pycache__/
+*.pyc
 
 # Generated Worker payload copied into the plugin package by publish scripts.
 plugin/akasha-genshin-automation/worker/win-x64/*

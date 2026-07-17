@@ -79,6 +79,6 @@ git tag v0.3.1
 git push origin v0.3.1
 ```
 
-The tag workflow validates that the tag and manifest versions match, runs the complete package script on `windows-latest`, and publishes the ZIP plus its SHA-256 file. A manual workflow dispatch is also available for rebuilding or creating a draft release.
+The tag workflow validates that the tag and manifest versions match, runs the complete package script on `windows-latest`, and publishes the same ZIP plus its SHA-256 file to GitHub and CNB Releases. Configure the GitHub repository secret `CNB_TOKEN` with CNB `repo-code` and `repo-release` read/write access limited to `AkashaNavigator/akasha-automation`. A manual workflow dispatch is also available for rebuilding or creating draft releases.
 
 Real input is enabled only by the production Worker under AkashaNavigator companion supervision. The permanent DevHost remains observe-only, while the separate administrator-only LiveTestHost is a local acceptance tool with foreground enforcement and a global emergency stop.

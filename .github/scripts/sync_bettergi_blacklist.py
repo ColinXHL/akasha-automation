@@ -113,10 +113,10 @@ def normalize_blacklist(raw: bytes) -> tuple[bytes, int, int]:
 
 def public_resource_url(notice_url: str, resource_key: str) -> str:
     notice = urllib.parse.urlsplit(notice_url)
-    if notice.scheme != "https" or not notice.netloc:
-        raise ValueError("QINIU_NOTICE_URL must be an absolute HTTPS URL")
+    if notice.scheme not in {"http", "https"} or not notice.netloc:
+        raise ValueError("QINIU_NOTICE_URL must be an absolute HTTP(S) URL")
     return urllib.parse.urlunsplit(
-        (notice.scheme, notice.netloc, "/" + resource_key.lstrip("/"), "", "")
+        ("https", notice.netloc, "/" + resource_key.lstrip("/"), "", "")
     )
 
 

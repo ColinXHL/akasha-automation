@@ -82,6 +82,13 @@ class SyncBetterGiBlacklistTests(unittest.TestCase):
                 "prefix/0.62.0.json",
             ),
         )
+        self.assertEqual(
+            "https://update.example.test/prefix/0.62.0.json",
+            MODULE.public_resource_url(
+                "http://update.example.test/notice.json",
+                "prefix/0.62.0.json",
+            ),
+        )
 
     def test_current_upstream_release_handles_null_resources(self):
         notice = self._notice()

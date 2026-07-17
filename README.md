@@ -10,6 +10,12 @@ The repository is intentionally independent from AkashaNavigator:
 
 The initial feature scope is automatic pickup and automatic dialogue derived from a pinned BetterGI source snapshot and matching runtime assets. The port is maintained behind an Akasha adapter boundary and may selectively adopt relevant BetterGI fixes at explicit release checkpoints; it does not continuously mirror upstream `main`.
 
+When AkashaNavigator starts the production Worker, it passes the plugin data root in
+`AKASHA_PLUGIN_DATA_DIR`. If `pick-blacklist/current.json` below that root is present
+and valid, AutoPick uses it instead of the packaged BetterGI default blacklist.
+Missing or invalid remote data falls back to the packaged list; user exact blacklist
+entries are always merged afterward. The Worker reads this file only at startup.
+
 See [docs/design.md](docs/design.md) for the architecture, [docs/implementation-plan.md](docs/implementation-plan.md) for the staged implementation plan, [docs/companion-protocol.md](docs/companion-protocol.md) for the Worker interoperability contract, and [docs/devhost.md](docs/devhost.md) for independent observe-only and real-input testing.
 
 ## Build
@@ -80,5 +86,13 @@ git push origin v0.3.2
 ```
 
 The tag workflow validates that the tag and manifest versions match, runs the complete package script on `windows-latest`, and publishes the same ZIP plus its SHA-256 file to GitHub and CNB Releases. Configure the GitHub repository secret `CNB_TOKEN` with CNB `repo-code` and `repo-release` read/write access limited to `AkashaNavigator/akasha-automation`. A manual workflow dispatch is also available for rebuilding or creating draft releases.
+
+`.github/workflows/sync_bettergi_blacklist.yml` checks the latest stable BetterGI
+Release daily and can also be dispatched manually. It downloads the large release
+archive only when `upstreamRelease` changes, verifies the GitHub size and SHA-256,
+extracts only the default pickup blacklist, and publishes the versioned resource
+before updating `notice.json`. In addition to the existing Qiniu secrets, configure
+`QINIU_PLUGIN_RESOURCE_PREFIX` (for example,
+`plugins/akasha-genshin-automation/pick-blacklist`).
 
 Real input is enabled only by the production Worker under AkashaNavigator companion supervision. The permanent DevHost remains observe-only, while the separate administrator-only LiveTestHost is a local acceptance tool with foreground enforcement and a global emergency stop.

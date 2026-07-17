@@ -165,7 +165,7 @@ def update_notice(
         resource = {
             "version": f"bettergi-{release_version}",
             "upstreamRelease": release_version,
-            "minPluginVersion": "0.3.2",
+            "minPluginVersion": "0.3.3",
             "fileName": "default_pick_black_lists.json",
             "size": len(resource_bytes),
             "sha256": digest,

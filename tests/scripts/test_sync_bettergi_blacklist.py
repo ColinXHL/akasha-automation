@@ -46,6 +46,7 @@ class SyncBetterGiBlacklistTests(unittest.TestCase):
         self.assertEqual(2, updated["schemaVersion"])
         self.assertEqual("bettergi-0.62.0", resource["version"])
         self.assertEqual("0.62.0", resource["upstreamRelease"])
+        self.assertEqual("0.3.3", resource["minPluginVersion"])
         self.assertEqual(2, resource["entryCount"])
         self.assertEqual(len(content), resource["size"])
 

@@ -81,8 +81,8 @@ Akasha Automation is released from this independent GPL-3.0 repository. In a com
 GitHub Releases are produced by `.github/workflows/publish.yml`. Update the version in `plugin.json`, commit it, then push a matching tag:
 
 ```powershell
-git tag v0.3.3
-git push origin v0.3.3
+git tag v0.4.2
+git push origin v0.4.2
 ```
 
 The tag workflow validates that the tag and manifest versions match, runs the complete package script on `windows-latest`, and publishes the same ZIP plus its SHA-256 file to GitHub and CNB Releases. Configure the GitHub repository secret `CNB_TOKEN` with CNB `repo-code` and `repo-release` read/write access limited to `AkashaNavigator/akasha-automation`. A manual workflow dispatch is also available for rebuilding or creating draft releases.

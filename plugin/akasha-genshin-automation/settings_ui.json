@@ -18,6 +18,23 @@
       ]
     },
     {
+      "title": "快捷键",
+      "items": [
+        {
+          "type": "hotkey",
+          "key": "autoPickHotkey",
+          "label": "切换自动拾取",
+          "default": "F9"
+        },
+        {
+          "type": "hotkey",
+          "key": "autoDialogueHotkey",
+          "label": "切换自动剧情",
+          "default": "F12"
+        }
+      ]
+    },
+    {
       "title": "详细设置",
       "items": [
         {

@@ -24,6 +24,7 @@ public sealed class PluginPackageContractTests
         var companion = root.GetProperty("companion");
 
         Assert.Contains("companion", permissions);
+        Assert.Contains("hotkey", permissions);
         Assert.Equal(
             "worker/win-x64/AkashaAutomation.Worker.exe",
             companion.GetProperty("executable").GetString());
@@ -59,6 +60,15 @@ public sealed class PluginPackageContractTests
         Assert.Contains("features.autoDialogue.setOptions", script, StringComparison.Ordinal);
         Assert.Contains("buildAutoPickOptions", script, StringComparison.Ordinal);
         Assert.Contains("buildAutoDialogueOptions", script, StringComparison.Ordinal);
+        Assert.Contains("autoPickHotkey", script, StringComparison.Ordinal);
+        Assert.Contains("autoDialogueHotkey", script, StringComparison.Ordinal);
+        Assert.Contains("hotkey.register", script, StringComparison.Ordinal);
+        Assert.Contains("hotkey.unregisterAll", script, StringComparison.Ordinal);
+        Assert.Contains("osd.show", script, StringComparison.Ordinal);
+        Assert.Contains("已关闭", script, StringComparison.Ordinal);
+        Assert.DoesNotContain("正在启用", script, StringComparison.Ordinal);
+        Assert.DoesNotContain("正在关闭", script, StringComparison.Ordinal);
+        Assert.Contains("切换失败", script, StringComparison.Ordinal);
     }
 
     private static void CollectKeyedItems(

@@ -1,5 +1,7 @@
 var AUTO_PICK_KEY = "autoPickEnabled";
 var AUTO_DIALOGUE_KEY = "autoDialogueEnabled";
+var AUTO_PICK_HOTKEY_KEY = "autoPickHotkey";
+var AUTO_DIALOGUE_HOTKEY_KEY = "autoDialogueHotkey";
 
 function readBoolean(key, defaultValue) {
     var value = config.get(key, defaultValue);
@@ -102,9 +104,73 @@ function applyFeatureOptions(method, options, displayName) {
         });
 }
 
+function showOsd(message, icon) {
+    if (typeof osd !== "undefined" && osd && typeof osd.show === "function") {
+        osd.show(message, icon);
+    }
+}
+
+function toggleFeature(configKey, method, optionsBuilder, displayName) {
+    var enabled = !readBoolean(configKey, false);
+    var options = optionsBuilder();
+    options.enabled = enabled;
+
+    return applyFeatureOptions(method, options, displayName)
+        .then(function () {
+            config.set(configKey, enabled);
+            log.info("已通过快捷键" + (enabled ? "启用" : "关闭") + displayName);
+            showOsd(
+                displayName + (enabled ? "已启用" : "已关闭"),
+                enabled ? "✅" : "⏸");
+        })
+        .catch(function (error) {
+            log.error("快捷键切换" + displayName + "失败: " + error);
+            showOsd(displayName + "切换失败", "⚠️");
+        });
+}
+
+function registerFeatureHotkey(configKey, defaultHotkey, callback, displayName) {
+    var keyCombo = readString(configKey, defaultHotkey);
+    var registrationId = hotkey.register(keyCombo, callback);
+    if (registrationId < 0) {
+        log.warn(displayName + "快捷键注册失败，可能与其它快捷键冲突: " + keyCombo);
+        showOsd(displayName + "快捷键注册失败", "⚠️");
+        return;
+    }
+
+    log.info("已注册" + displayName + "快捷键: " + keyCombo);
+}
+
+function registerFeatureHotkeys() {
+    registerFeatureHotkey(
+        AUTO_PICK_HOTKEY_KEY,
+        "F9",
+        function () {
+            toggleFeature(
+                AUTO_PICK_KEY,
+                "features.autoPick.setOptions",
+                buildAutoPickOptions,
+                "自动拾取");
+        },
+        "自动拾取");
+
+    registerFeatureHotkey(
+        AUTO_DIALOGUE_HOTKEY_KEY,
+        "F12",
+        function () {
+            toggleFeature(
+                AUTO_DIALOGUE_KEY,
+                "features.autoDialogue.setOptions",
+                buildAutoDialogueOptions,
+                "自动剧情");
+        },
+        "自动剧情");
+}
+
 function onLoad() {
     var autoPickOptions = buildAutoPickOptions();
     var autoDialogueOptions = buildAutoDialogueOptions();
+    registerFeatureHotkeys();
 
     log.info("正在启动 Akasha Automation Worker...");
     companion.start()
@@ -125,6 +191,7 @@ function onLoad() {
         })
         .catch(function (error) {
             log.error("Worker 初始化异常: " + error);
+            showOsd("原神自动化启动失败", "⚠️");
             return companion.stop().catch(function (stopError) {
                 log.warn("初始化失败后的 Worker 清理异常: " + stopError);
             });
@@ -132,6 +199,7 @@ function onLoad() {
 }
 
 function onUnload() {
+    hotkey.unregisterAll();
     companion.stop().catch(function (error) {
         log.warn("Worker 停止异常: " + error);
     });

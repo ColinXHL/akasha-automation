@@ -84,30 +84,7 @@ The script runs the test suite, publishes the framework-dependent `win-x64` Work
 
 New Akasha Automation versions are released from the GPL-3.0 AkashaPlugins repository and installed through the official catalog.
 
-GitHub Releases are produced by `.github/workflows/publish.yml`. Update the version in `plugin.json`, commit it, then push a matching tag:
-
-```powershell
-git tag v0.4.3
-git push origin v0.4.3
-```
-
-The tag workflow validates that the tag and manifest versions match, runs the complete package script on `windows-latest`, and publishes the same ZIP plus its SHA-256 file to GitHub and CNB Releases. After both public releases succeed, it dispatches the verified package metadata to AkashaNavigator so the shared `notice.json` plugin catalog is updated automatically.
-
-Configure these GitHub repository settings:
-
-- Secret `CNB_TOKEN` with CNB `repo-code` and `repo-release` read/write access limited to `AkashaNavigator/akasha-automation`.
-- Secret `AKASHA_NAVIGATOR_DISPATCH_TOKEN`, using a fine-grained token limited to
-  `ColinXHL/AkashaNavigator` with repository **Contents: Read and write** permission.
-- Optional variable `AUTOMATION_MIN_HOST_VERSION`; when omitted, the workflow uses `1.4.0-alpha.2`.
-
-A manual workflow dispatch is also available for rebuilding or creating draft releases. Draft releases do not update the public plugin catalog.
-
-`.github/workflows/sync_bettergi_blacklist.yml` checks the latest stable BetterGI
-Release daily and can also be dispatched manually. It downloads the large release
-archive only when `upstreamRelease` changes, verifies the GitHub size and SHA-256,
-extracts only the default pickup blacklist, and publishes the versioned resource
-before updating `notice.json`. In addition to the existing Qiniu secrets, configure
-`QINIU_PLUGIN_RESOURCE_PREFIX` (for example,
-`plugins/akasha-genshin-automation/pick-blacklist`).
+The historical workflows remain only as migration provenance. Do not create new tags
+or Releases in this archived repository.
 
 Real input is enabled only by the production Worker under AkashaNavigator companion supervision. The permanent DevHost remains observe-only, while the separate administrator-only LiveTestHost is a local acceptance tool with foreground enforcement and a global emergency stop.

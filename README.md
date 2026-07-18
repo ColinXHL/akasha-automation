@@ -81,11 +81,20 @@ Akasha Automation is released from this independent GPL-3.0 repository. In a com
 GitHub Releases are produced by `.github/workflows/publish.yml`. Update the version in `plugin.json`, commit it, then push a matching tag:
 
 ```powershell
-git tag v0.4.2
-git push origin v0.4.2
+git tag v0.4.3
+git push origin v0.4.3
 ```
 
-The tag workflow validates that the tag and manifest versions match, runs the complete package script on `windows-latest`, and publishes the same ZIP plus its SHA-256 file to GitHub and CNB Releases. Configure the GitHub repository secret `CNB_TOKEN` with CNB `repo-code` and `repo-release` read/write access limited to `AkashaNavigator/akasha-automation`. A manual workflow dispatch is also available for rebuilding or creating draft releases.
+The tag workflow validates that the tag and manifest versions match, runs the complete package script on `windows-latest`, and publishes the same ZIP plus its SHA-256 file to GitHub and CNB Releases. After both public releases succeed, it dispatches the verified package metadata to AkashaNavigator so the shared `notice.json` plugin catalog is updated automatically.
+
+Configure these GitHub repository settings:
+
+- Secret `CNB_TOKEN` with CNB `repo-code` and `repo-release` read/write access limited to `AkashaNavigator/akasha-automation`.
+- Secret `AKASHA_NAVIGATOR_DISPATCH_TOKEN`, using a fine-grained token limited to
+  `ColinXHL/AkashaNavigator` with repository **Contents: Read and write** permission.
+- Optional variable `AUTOMATION_MIN_HOST_VERSION`; when omitted, the workflow uses `1.4.0-alpha.2`.
+
+A manual workflow dispatch is also available for rebuilding or creating draft releases. Draft releases do not update the public plugin catalog.
 
 `.github/workflows/sync_bettergi_blacklist.yml` checks the latest stable BetterGI
 Release daily and can also be dispatched manually. It downloads the large release

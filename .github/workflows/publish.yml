@@ -66,6 +66,9 @@ jobs:
     name: Test and package plugin
     runs-on: windows-latest
     needs: validate
+    outputs:
+      package_size: ${{ steps.assets.outputs.package_size }}
+      package_sha256: ${{ steps.assets.outputs.package_sha256 }}
     steps:
       - uses: actions/checkout@v5
 
@@ -78,6 +81,7 @@ jobs:
         run: .\scripts\Publish-Plugin.ps1
 
       - name: Verify release assets
+        id: assets
         shell: pwsh
         run: |
           $version = "${{ needs.validate.outputs.version }}"
@@ -96,6 +100,9 @@ jobs:
           if ($expectedHash -ne $actualHash) {
               throw "插件 ZIP 的 SHA-256 与校验文件不一致"
           }
+
+          "package_size=$((Get-Item -LiteralPath $archive).Length)" >> $env:GITHUB_OUTPUT
+          "package_sha256=$actualHash" >> $env:GITHUB_OUTPUT
 
       - uses: actions/upload-artifact@v6
         with:
@@ -205,3 +212,43 @@ jobs:
             --assets release \
             --draft "${{ needs.validate.outputs.draft }}" \
             --prerelease "${{ needs.validate.outputs.prerelease }}"
+
+  notify_navigator:
+    name: Publish plugin metadata to AkashaNavigator notice
+    runs-on: ubuntu-latest
+    needs:
+      - validate
+      - build
+      - create_release
+      - create_cnb_release
+    if: needs.validate.outputs.draft == 'false'
+    steps:
+      - name: Verify dispatch token is configured
+        shell: bash
+        env:
+          DISPATCH_TOKEN: ${{ secrets.AKASHA_NAVIGATOR_DISPATCH_TOKEN }}
+        run: |
+          if [ -z "$DISPATCH_TOKEN" ]; then
+            echo "::error::GitHub repository secret AKASHA_NAVIGATOR_DISPATCH_TOKEN is not configured."
+            exit 1
+          fi
+
+      - name: Dispatch released package metadata
+        uses: actions/github-script@v8
+        with:
+          github-token: ${{ secrets.AKASHA_NAVIGATOR_DISPATCH_TOKEN }}
+          script: |
+            const version = '${{ needs.validate.outputs.version }}';
+            await github.rest.repos.createDispatchEvent({
+              owner: 'ColinXHL',
+              repo: 'AkashaNavigator',
+              event_type: 'automation_plugin_released',
+              client_payload: {
+                version,
+                min_host_version: '${{ vars.AUTOMATION_MIN_HOST_VERSION || '1.4.0-alpha.2' }}',
+                package_size: '${{ needs.build.outputs.package_size }}',
+                package_sha256: '${{ needs.build.outputs.package_sha256 }}',
+                github_url: `https://github.com/ColinXHL/akasha-automation/releases/download/v${version}/akasha-genshin-automation-v${version}.zip`,
+                cnb_url: `https://cnb.cool/AkashaNavigator/akasha-automation/-/releases/download/v${version}/akasha-genshin-automation-v${version}.zip`
+              }
+            });

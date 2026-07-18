@@ -12,6 +12,7 @@
     <SelfContained>false</SelfContained>
     <PublishSingleFile>false</PublishSingleFile>
     <AssemblyName>AkashaAutomation.DevHost</AssemblyName>
+    <ApplicationManifest>..\..\build\AkashaAutomation.app.manifest</ApplicationManifest>
     <IsPackable>false</IsPackable>
   </PropertyGroup>
 

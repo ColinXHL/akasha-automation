@@ -1,8 +1,14 @@
 # Akasha Automation
 
+> [!IMPORTANT]
+> This repository is archived. Development, issues, and namespaced Releases moved to
+> [AkashaPlugins/plugins/akasha-genshin-automation](https://github.com/ColinXHL/akasha-plugins/tree/main/plugins/akasha-genshin-automation).
+> Existing AkashaNavigator installations are adopted by the official AkashaPlugins catalog
+> without replacing user configuration or enabling automatic updates.
+
 Akasha Automation is the out-of-process game automation companion for AkashaNavigator.
 
-The repository is intentionally independent from AkashaNavigator:
+The historical repository was intentionally independent from AkashaNavigator:
 
 - AkashaNavigator owns the generic plugin and companion-process hosting API.
 - The Akasha plugin owns settings, hotkeys, and status presentation.
@@ -76,23 +82,9 @@ Build and verify the installable plugin ZIP:
 
 The script runs the test suite, publishes the framework-dependent `win-x64` Worker, includes the pinned BetterGI assets and legal notices, creates `package-manifest.json`, then extracts and verifies the finished ZIP. Outputs are written to `artifacts/release/`.
 
-Akasha Automation is released from this independent GPL-3.0 repository. In a compatible AkashaNavigator build, open **插件中心 → 可用插件 → 从 ZIP 安装**, select the release ZIP, and then add the installed plugin to a Genshin Profile. Importing a newer ZIP updates the installed plugin while keeping Profile settings.
+New Akasha Automation versions are released from the GPL-3.0 AkashaPlugins repository and installed through the official catalog.
 
-GitHub Releases are produced by `.github/workflows/publish.yml`. Update the version in `plugin.json`, commit it, then push a matching tag:
-
-```powershell
-git tag v0.4.2
-git push origin v0.4.2
-```
-
-The tag workflow validates that the tag and manifest versions match, runs the complete package script on `windows-latest`, and publishes the same ZIP plus its SHA-256 file to GitHub and CNB Releases. Configure the GitHub repository secret `CNB_TOKEN` with CNB `repo-code` and `repo-release` read/write access limited to `AkashaNavigator/akasha-automation`. A manual workflow dispatch is also available for rebuilding or creating draft releases.
-
-`.github/workflows/sync_bettergi_blacklist.yml` checks the latest stable BetterGI
-Release daily and can also be dispatched manually. It downloads the large release
-archive only when `upstreamRelease` changes, verifies the GitHub size and SHA-256,
-extracts only the default pickup blacklist, and publishes the versioned resource
-before updating `notice.json`. In addition to the existing Qiniu secrets, configure
-`QINIU_PLUGIN_RESOURCE_PREFIX` (for example,
-`plugins/akasha-genshin-automation/pick-blacklist`).
+The historical workflows remain only as migration provenance. Do not create new tags
+or Releases in this archived repository.
 
 Real input is enabled only by the production Worker under AkashaNavigator companion supervision. The permanent DevHost remains observe-only, while the separate administrator-only LiveTestHost is a local acceptance tool with foreground enforcement and a global emergency stop.

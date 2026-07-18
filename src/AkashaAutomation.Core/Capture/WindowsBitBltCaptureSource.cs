@@ -9,6 +9,8 @@ public sealed class WindowsBitBltCaptureSource(
     IGameWindowLocator windowLocator,
     IClock clock) : ICaptureSource
 {
+    private readonly object _sessionGate = new();
+    private CaptureSession? _session;
     private long _sequence;
     private bool _disposed;
 
@@ -22,7 +24,13 @@ public sealed class WindowsBitBltCaptureSource(
         }
 
         cancellationToken.ThrowIfCancellationRequested();
-        var image = CaptureClientArea(window.Handle, window.ClientSize);
+        Mat image;
+        lock (_sessionGate)
+        {
+            ObjectDisposedException.ThrowIf(_disposed, this);
+            image = CaptureWindow(window.Handle, window.ClientSize);
+        }
+
         return CapturedFrame.TakeOwnership(
             image,
             Interlocked.Increment(ref _sequence),
@@ -32,107 +40,212 @@ public sealed class WindowsBitBltCaptureSource(
 
     public ValueTask DisposeAsync()
     {
-        _disposed = true;
+        lock (_sessionGate)
+        {
+            if (_disposed)
+            {
+                return ValueTask.CompletedTask;
+            }
+
+            _disposed = true;
+            ResetSession();
+        }
+
         return ValueTask.CompletedTask;
     }
 
-    private static Mat CaptureClientArea(nint windowHandle, CaptureSize clientSize)
+    private Mat CaptureWindow(nint windowHandle, CaptureSize clientSize)
     {
-        var origin = new NativePoint();
-        if (!NativeMethods.ClientToScreen(windowHandle, ref origin))
+        for (var attempt = 0; attempt < 2; attempt++)
         {
-            throw new Win32Exception(Marshal.GetLastWin32Error(), "Unable to locate the game client area on screen.");
+            EnsureSession(windowHandle, clientSize);
+            try
+            {
+                return _session!.Capture();
+            }
+            catch when (attempt == 0)
+            {
+                ResetSession();
+            }
+            catch
+            {
+                ResetSession();
+                throw;
+            }
         }
 
-        var screenDc = NativeMethods.GetDC(nint.Zero);
-        if (screenDc == nint.Zero)
-        {
-            throw new Win32Exception(Marshal.GetLastWin32Error(), "Unable to acquire the desktop device context.");
-        }
-
-        nint memoryDc = nint.Zero;
-        nint bitmap = nint.Zero;
-        nint previousBitmap = nint.Zero;
-        try
-        {
-            memoryDc = NativeMethods.CreateCompatibleDC(screenDc);
-            if (memoryDc == nint.Zero)
-            {
-                throw new Win32Exception(Marshal.GetLastWin32Error(), "Unable to create a capture device context.");
-            }
-
-            bitmap = NativeMethods.CreateCompatibleBitmap(screenDc, clientSize.Width, clientSize.Height);
-            if (bitmap == nint.Zero)
-            {
-                throw new Win32Exception(Marshal.GetLastWin32Error(), "Unable to create a capture bitmap.");
-            }
-
-            previousBitmap = NativeMethods.SelectObject(memoryDc, bitmap);
-            if (previousBitmap == nint.Zero || previousBitmap == new nint(-1))
-            {
-                throw new Win32Exception(Marshal.GetLastWin32Error(), "Unable to select the capture bitmap.");
-            }
-
-            if (!NativeMethods.BitBlt(
-                    memoryDc,
-                    0,
-                    0,
-                    clientSize.Width,
-                    clientSize.Height,
-                    screenDc,
-                    origin.X,
-                    origin.Y,
-                    NativeMethods.SourceCopy | NativeMethods.CaptureLayeredWindows))
-            {
-                throw new Win32Exception(Marshal.GetLastWin32Error(), "Unable to capture the game client area.");
-            }
-
-            NativeMethods.SelectObject(memoryDc, previousBitmap);
-            previousBitmap = nint.Zero;
-
-            using var bgra = new Mat(clientSize.Height, clientSize.Width, MatType.CV_8UC4);
-            var bitmapInfo = NativeBitmapInfo.Create(clientSize.Width, clientSize.Height);
-            var rows = NativeMethods.GetDIBits(
-                memoryDc,
-                bitmap,
-                0,
-                (uint)clientSize.Height,
-                bgra.Data,
-                ref bitmapInfo,
-                NativeMethods.DibRgbColors);
-            if (rows != clientSize.Height)
-            {
-                throw new Win32Exception(Marshal.GetLastWin32Error(), "Unable to read the captured game bitmap.");
-            }
-
-            return bgra.CvtColor(ColorConversionCodes.BGRA2BGR);
-        }
-        finally
-        {
-            if (previousBitmap != nint.Zero && memoryDc != nint.Zero)
-            {
-                NativeMethods.SelectObject(memoryDc, previousBitmap);
-            }
-
-            if (bitmap != nint.Zero)
-            {
-                NativeMethods.DeleteObject(bitmap);
-            }
-
-            if (memoryDc != nint.Zero)
-            {
-                NativeMethods.DeleteDC(memoryDc);
-            }
-
-            NativeMethods.ReleaseDC(nint.Zero, screenDc);
-        }
+        throw new InvalidOperationException("Unable to capture the game window.");
     }
 
-    [StructLayout(LayoutKind.Sequential)]
-    private struct NativePoint
+    private void EnsureSession(nint windowHandle, CaptureSize clientSize)
     {
-        internal int X;
-        internal int Y;
+        if (_session?.Matches(windowHandle, clientSize) == true)
+        {
+            return;
+        }
+
+        ResetSession();
+        _session = new CaptureSession(windowHandle, clientSize);
+    }
+
+    private void ResetSession()
+    {
+        _session?.Dispose();
+        _session = null;
+    }
+
+    private sealed class CaptureSession : IDisposable
+    {
+        private readonly nint _windowHandle;
+        private readonly int _width;
+        private readonly int _height;
+        private readonly int _stride;
+        private nint _sourceDc;
+        private nint _memoryDc;
+        private nint _bitmap;
+        private nint _previousBitmap;
+        private nint _bits;
+        private bool _disposed;
+
+        internal CaptureSession(nint windowHandle, CaptureSize clientSize)
+        {
+            if (windowHandle == nint.Zero)
+            {
+                throw new ArgumentException("The game window handle is invalid.", nameof(windowHandle));
+            }
+
+            if (clientSize.Width <= 0 || clientSize.Height <= 0)
+            {
+                throw new ArgumentOutOfRangeException(nameof(clientSize), "The game client size is invalid.");
+            }
+
+            _windowHandle = windowHandle;
+            _width = clientSize.Width;
+            _height = clientSize.Height;
+            _stride = checked(_width * 4);
+
+            try
+            {
+                _sourceDc = NativeMethods.GetDC(_windowHandle);
+                if (_sourceDc == nint.Zero)
+                {
+                    throw NewWin32Exception("Unable to acquire the game window device context.");
+                }
+
+                _memoryDc = NativeMethods.CreateCompatibleDC(_sourceDc);
+                if (_memoryDc == nint.Zero)
+                {
+                    throw NewWin32Exception("Unable to create a capture device context.");
+                }
+
+                var bitmapInfo = NativeBitmapInfo.Create(_width, _height);
+                _bitmap = NativeMethods.CreateDIBSection(
+                    _sourceDc,
+                    ref bitmapInfo,
+                    NativeMethods.DibRgbColors,
+                    out _bits,
+                    nint.Zero,
+                    0);
+                if (_bitmap == nint.Zero || _bits == nint.Zero)
+                {
+                    throw NewWin32Exception("Unable to create a capture DIB section.");
+                }
+
+                _previousBitmap = NativeMethods.SelectObject(_memoryDc, _bitmap);
+                if (_previousBitmap == nint.Zero || _previousBitmap == new nint(-1))
+                {
+                    throw NewWin32Exception("Unable to select the capture DIB section.");
+                }
+
+                if (!NativeMethods.GdiFlush())
+                {
+                    throw NewWin32Exception("Unable to initialize the capture session.");
+                }
+            }
+            catch
+            {
+                Dispose();
+                throw;
+            }
+        }
+
+        internal bool Matches(nint windowHandle, CaptureSize clientSize) =>
+            !_disposed &&
+            _windowHandle == windowHandle &&
+            _width == clientSize.Width &&
+            _height == clientSize.Height;
+
+        internal Mat Capture()
+        {
+            ObjectDisposedException.ThrowIf(_disposed, this);
+            if (!NativeMethods.BitBlt(
+                    _memoryDc,
+                    0,
+                    0,
+                    _width,
+                    _height,
+                    _sourceDc,
+                    0,
+                    0,
+                    NativeMethods.SourceCopy))
+            {
+                throw NewWin32Exception("Unable to capture the game client area.");
+            }
+
+            if (!NativeMethods.GdiFlush())
+            {
+                throw NewWin32Exception("Unable to flush the captured game frame.");
+            }
+
+            using var bgra = Mat.FromPixelData(
+                _height,
+                _width,
+                MatType.CV_8UC4,
+                _bits,
+                _stride);
+            return bgra.CvtColor(ColorConversionCodes.BGRA2BGR);
+        }
+
+        public void Dispose()
+        {
+            if (_disposed)
+            {
+                return;
+            }
+
+            _disposed = true;
+            NativeMethods.GdiFlush();
+
+            if (_previousBitmap != nint.Zero &&
+                _previousBitmap != new nint(-1) &&
+                _memoryDc != nint.Zero)
+            {
+                NativeMethods.SelectObject(_memoryDc, _previousBitmap);
+            }
+
+            _previousBitmap = nint.Zero;
+            if (_bitmap != nint.Zero)
+            {
+                NativeMethods.DeleteObject(_bitmap);
+                _bitmap = nint.Zero;
+            }
+
+            _bits = nint.Zero;
+            if (_memoryDc != nint.Zero)
+            {
+                NativeMethods.DeleteDC(_memoryDc);
+                _memoryDc = nint.Zero;
+            }
+
+            if (_sourceDc != nint.Zero)
+            {
+                NativeMethods.ReleaseDC(_windowHandle, _sourceDc);
+                _sourceDc = nint.Zero;
+            }
+        }
+
+        private static Win32Exception NewWin32Exception(string message) =>
+            new(Marshal.GetLastWin32Error(), message);
     }
 
     [StructLayout(LayoutKind.Sequential)]
@@ -168,6 +281,7 @@ public sealed class WindowsBitBltCaptureSource(
                     Planes = 1,
                     BitCount = 32,
                     Compression = NativeMethods.BitmapCompressionRgb,
+                    SizeImage = checked((uint)(width * height * 4)),
                 },
             };
     }
@@ -175,7 +289,6 @@ public sealed class WindowsBitBltCaptureSource(
     private static class NativeMethods
     {
         internal const uint SourceCopy = 0x00CC0020;
-        internal const uint CaptureLayeredWindows = 0x40000000;
         internal const uint DibRgbColors = 0;
         internal const uint BitmapCompressionRgb = 0;
 
@@ -185,15 +298,17 @@ public sealed class WindowsBitBltCaptureSource(
         [DllImport("user32.dll", SetLastError = true)]
         internal static extern int ReleaseDC(nint window, nint deviceContext);
 
-        [DllImport("user32.dll", SetLastError = true)]
-        [return: MarshalAs(UnmanagedType.Bool)]
-        internal static extern bool ClientToScreen(nint window, ref NativePoint point);
-
         [DllImport("gdi32.dll", SetLastError = true)]
         internal static extern nint CreateCompatibleDC(nint deviceContext);
 
         [DllImport("gdi32.dll", SetLastError = true)]
-        internal static extern nint CreateCompatibleBitmap(nint deviceContext, int width, int height);
+        internal static extern nint CreateDIBSection(
+            nint deviceContext,
+            ref NativeBitmapInfo bitmapInfo,
+            uint usage,
+            out nint bits,
+            nint section,
+            uint offset);
 
         [DllImport("gdi32.dll", SetLastError = true)]
         internal static extern nint SelectObject(nint deviceContext, nint value);
@@ -220,13 +335,7 @@ public sealed class WindowsBitBltCaptureSource(
             uint operation);
 
         [DllImport("gdi32.dll", SetLastError = true)]
-        internal static extern int GetDIBits(
-            nint deviceContext,
-            nint bitmap,
-            uint startScan,
-            uint scanLines,
-            nint bits,
-            ref NativeBitmapInfo bitmapInfo,
-            uint usage);
+        [return: MarshalAs(UnmanagedType.Bool)]
+        internal static extern bool GdiFlush();
     }
 }
